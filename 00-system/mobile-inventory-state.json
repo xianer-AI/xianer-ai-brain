@@ -45,6 +45,22 @@
     "legacy_automation_backup": "/Users/xianer/.codex/backups/github-primary-20260914-012433/automation-ai.toml",
     "update_test_commit": "68d9ef8c5cb3dc977ffe5f3294f05213799eda4d",
     "update_test_marker": "mobile-github-sync-20260914-02",
-    "test_file_sha256": "553331f2a5594609ba049f0a4546447dcc82920a5d08b3e176add1f825ffae90"
+    "test_file_sha256": "553331f2a5594609ba049f0a4546447dcc82920a5d08b3e176add1f825ffae90",
+    "real_instruction": {
+      "source_thread_id": "6aa6da03-f42c-83ea-9f6d-88c5fe1ba857",
+      "source_message_id": "d201a2ce-ceb9-4d3c-ad2a-1c9ab0c24954",
+      "transaction_id": "inventory-20260914-a83ce7d3-b343-4bd5-ab98-479c538806bb",
+      "commit": "f1b9a7cc88858011c12028d31f23d101b2ccbb5a",
+      "execution_path": "local_work_thread_01a09bd4-687c-7941-b95f-7ef840952597",
+      "computer_receive_verified": true,
+      "before_black": 21458,
+      "after_black": 21958,
+      "before_total": 65394,
+      "after_total": 65894
+    },
+    "phone_microphone_verified": false,
+    "computer_offline_phone_inventory_write_verified": false,
+    "automation_status": "ACTIVE",
+    "automation_interval_minutes": 15
   }
 }
