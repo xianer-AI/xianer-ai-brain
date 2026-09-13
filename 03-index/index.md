@@ -25,7 +25,7 @@
 
 ### 决策与复盘
 
-暂无内容。
+- [知识库版本控制与远程同步](../02-knowledge/decisions/knowledge-base-version-control.md)：记录知识库变动后的自动提交和远程同步偏好。
 
 ## 按状态
 
