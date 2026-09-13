@@ -4,5 +4,5 @@
 
 1. 新内容以 `YYYY-MM-DD-topic.md` 命名。
 2. 补充来源、时间、上下文和待确认问题。
-3. 整理后移入 `01-facts/` 或 `02-knowledge/`。
+3. 整理后，明确属于某个项目的内容移入对应项目目录；跨项目内容再移入 `01-facts/` 或 `02-knowledge/`。
 4. 不确定归属时，在 `03-index/inbox-triage.md` 增加待办。
