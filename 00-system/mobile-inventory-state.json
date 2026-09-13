@@ -10,15 +10,25 @@
   "observed_message_ids": [
     "735e1f64-ec75-4ae4-af8b-979ffee1c78f",
     "7e609f76-64ff-4f9a-8d7f-73eea4e2ca81",
-    "0a1cef0a-bb54-4c60-bb41-480de1c1cb12"
+    "0a1cef0a-bb54-4c60-bb41-480de1c1cb12",
+    "1973d17d-3cb5-4be4-aa48-99086c87494c"
   ],
   "receipt_message_ids": [
     "7e609f76-64ff-4f9a-8d7f-73eea4e2ca81",
-    "0a1cef0a-bb54-4c60-bb41-480de1c1cb12"
+    "0a1cef0a-bb54-4c60-bb41-480de1c1cb12",
+    "1973d17d-3cb5-4be4-aa48-99086c87494c"
   ],
-  "last_seen_cloud_updated_at": 1789318083.289,
+  "last_seen_cloud_updated_at": 1789318515.277,
   "events": [],
-  "receipts": {},
-  "rollout_status": "preparing",
-  "last_reported_inventory_sha256": "2d178578bbf4f8a61efafee142921e227b0d5dbf9e8249283292744c09f25a29"
+  "receipts": {
+    "setup-20260914": {
+      "status": "verified",
+      "message_id": "1973d17d-3cb5-4be4-aa48-99086c87494c",
+      "completed_at": 1789318512.592388
+    }
+  },
+  "rollout_status": "trial_configured",
+  "last_reported_inventory_sha256": "2d178578bbf4f8a61efafee142921e227b0d5dbf9e8249283292744c09f25a29",
+  "automation_id": "ai",
+  "configured_at": "2026-09-14T00:56:33+08:00"
 }
