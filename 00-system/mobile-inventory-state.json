@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "thread_id": "6aa6ce99-38c4-83ea-80c2-51438053f9b4",
+  "baseline": {
+    "message_id": "0a1cef0a-bb54-4c60-bb41-480de1c1cb12",
+    "started_at": 1789318076.949,
+    "completed_at": 1789318082.294973,
+    "inventory_commit": "a764e7aedc4b9af9bd40c956f0fe995799813152"
+  },
+  "observed_message_ids": [
+    "735e1f64-ec75-4ae4-af8b-979ffee1c78f",
+    "7e609f76-64ff-4f9a-8d7f-73eea4e2ca81",
+    "0a1cef0a-bb54-4c60-bb41-480de1c1cb12"
+  ],
+  "receipt_message_ids": [
+    "7e609f76-64ff-4f9a-8d7f-73eea4e2ca81",
+    "0a1cef0a-bb54-4c60-bb41-480de1c1cb12"
+  ],
+  "last_seen_cloud_updated_at": 1789318083.289,
+  "events": [],
+  "receipts": {},
+  "rollout_status": "preparing",
+  "last_reported_inventory_sha256": "2d178578bbf4f8a61efafee142921e227b0d5dbf9e8249283292744c09f25a29"
+}
