@@ -22,7 +22,7 @@
 
 ### 指南
 
-- [手机与电脑知识库同步](../00-system/mobile-inventory-sync.md)：手机 ChatGPT 写入 GitHub，电脑每 15 分钟接收；含使用入口及实测限制。
+- [手机与电脑知识库同步](../00-system/mobile-inventory-sync.md)：手机 ChatGPT 写入 GitHub，电脑每 15 分钟接收；电脑 Codex 可保存普通知识并推送，含使用入口及实测限制。
 
 ### 领域
 
