@@ -22,7 +22,7 @@
 
 ### 指南
 
-- [手机库存同步试用](../00-system/mobile-inventory-sync.md)：指定手机对话的库存指令、电脑入账、GitHub 推送及核验回执。
+- [手机与电脑知识库同步](../00-system/mobile-inventory-sync.md)：手机 ChatGPT 写入 GitHub，电脑每 15 分钟接收；含使用入口及实测限制。
 
 ### 领域
 

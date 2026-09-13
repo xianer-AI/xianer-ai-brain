@@ -249,6 +249,9 @@ def build_transaction(root, command, state, state_before):
 def recover_locked(root):
     if not (root / JOURNAL).exists():
         return None
+    current_state = load_json(read(root, STATE), "同步状态")
+    if isinstance(current_state, dict) and current_state.get("mode") == "github_primary_computer_receive_only":
+        raise InventoryError("当前使用 GitHub 入账、电脑只接收模式，拒绝恢复旧库存事务")
     journal = load_json(read(root, JOURNAL), "事务日志")
     if not isinstance(journal, dict):
         raise InventoryError("事务日志必须为 JSON 对象，停止恢复")
@@ -281,11 +284,16 @@ def recover_locked(root):
 def apply(root, command):
     validate_command(command)
     with locked(root):
+        initial_state = load_json(read(root, STATE), "同步状态")
+        if isinstance(initial_state, dict) and initial_state.get("mode") == "github_primary_computer_receive_only":
+            raise InventoryError("当前使用 GitHub 入账、电脑只接收模式，拒绝本地入账及自动恢复旧事务")
         recover_locked(root)
         state_before = read(root, STATE)
         state = load_json(state_before, "同步状态")
         if not isinstance(state, dict) or state.get("version") != 1 or state.get("thread_id") != THREAD_ID or not isinstance(state.get("events"), list):
             raise InventoryError("同步状态尚未正确初始化，拒绝入账")
+        if state.get("mode") == "github_primary_computer_receive_only":
+            raise InventoryError("当前使用 GitHub 入账、电脑只接收模式，拒绝本地入账")
         for event in state["events"]:
             source = event.get("source", {})
             if source.get("thread_id") == THREAD_ID and source.get("message_id") == command["message_id"]:

@@ -105,6 +105,47 @@ class MobileInventoryTests(unittest.TestCase):
             inventory.apply(self.root, self.command())
         self.assertEqual(self.all_contents(), before)
 
+    def test_github_primary_mode_blocks_apply_before_recovery(self):
+        state = self.state_now()
+        state["mode"] = "github_primary_computer_receive_only"
+        (self.root / inventory.STATE).write_text(inventory.json_text(state), encoding="utf-8")
+        journal = self.root / inventory.JOURNAL
+        for pending in (False, True):
+            with self.subTest(pending_journal=pending):
+                if pending:
+                    journal.write_text("{\"old_transaction\": true}\n", encoding="utf-8")
+                before = self.all_contents()
+                with patch.object(inventory, "recover_locked") as recover:
+                    with self.assertRaisesRegex(inventory.InventoryError, "GitHub"):
+                        inventory.apply(self.root, self.command())
+                    recover.assert_not_called()
+                self.assertEqual(self.all_contents(), before)
+                self.assertEqual(journal.exists(), pending)
+                if pending:
+                    self.assertEqual(journal.read_text(), "{\"old_transaction\": true}\n")
+
+    def test_github_primary_mode_blocks_direct_pending_recovery(self):
+        state_before = (self.root / inventory.STATE).read_text(encoding="utf-8")
+        old_transaction = inventory.build_transaction(
+            self.root, self.command(), json.loads(state_before), state_before,
+        )
+        journal = self.root / inventory.JOURNAL
+        journal.write_text(inventory.json_text(old_transaction), encoding="utf-8")
+        state = self.state_now()
+        state["mode"] = "github_primary_computer_receive_only"
+        (self.root / inventory.STATE).write_text(inventory.json_text(state), encoding="utf-8")
+        before = self.all_contents()
+        journal_before = journal.read_text(encoding="utf-8")
+        with inventory.locked(self.root):
+            with self.assertRaisesRegex(inventory.InventoryError, "GitHub"):
+                inventory.recover_locked(self.root)
+        self.assertEqual(self.all_contents(), before)
+        self.assertEqual(journal.read_text(encoding="utf-8"), journal_before)
+        journal.unlink()
+        with inventory.locked(self.root):
+            self.assertIsNone(inventory.recover_locked(self.root))
+        self.assertEqual(self.all_contents(), before)
+
     def test_interruption_after_each_transaction_file_recovers_once(self):
         original_write = inventory.atomic_write
         for stop_after in range(1, 7):

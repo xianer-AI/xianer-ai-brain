@@ -27,8 +27,24 @@
       "completed_at": 1789318512.592388
     }
   },
-  "rollout_status": "trial_configured",
+  "rollout_status": "github_write_and_manual_computer_pull_verified",
   "last_reported_inventory_sha256": "2d178578bbf4f8a61efafee142921e227b0d5dbf9e8249283292744c09f25a29",
   "automation_id": "ai",
-  "configured_at": "2026-09-14T00:56:33+08:00"
+  "configured_at": "2026-09-14T00:56:33+08:00",
+  "mode": "github_primary_computer_receive_only",
+  "active_github_thread_id": "6aa6da03-f42c-83ea-9f6d-88c5fe1ba857",
+  "mode_changed_at": "2026-09-14T01:31:09+08:00",
+  "github_primary": {
+    "repository": "7744332/-AI-",
+    "branch": "main",
+    "installation_id": 161419935,
+    "test_commit": "eca647a8d8d34327c7d547a4fb3b74e9ed69464c",
+    "test_path": "04-inbox/手机同步验证-20260914-01.md",
+    "real_inventory_changed_by_test": false,
+    "scheduled_trigger_verified": false,
+    "legacy_automation_backup": "/Users/xianer/.codex/backups/github-primary-20260914-012433/automation-ai.toml",
+    "update_test_commit": "68d9ef8c5cb3dc977ffe5f3294f05213799eda4d",
+    "update_test_marker": "mobile-github-sync-20260914-02",
+    "test_file_sha256": "553331f2a5594609ba049f0a4546447dcc82920a5d08b3e176add1f825ffae90"
+  }
 }
