@@ -57,7 +57,7 @@ class GithubInventoryPullTests(unittest.TestCase):
         total = self.initial_inventory["total"]
         black = self.initial_inventory["colors"]["黑色"]
         text = main.read_text().replace(
-            f"| 已录入库存 | {total:,} 双 |", f"| 已录入库存 | {total + 17:,} 双 |",
+            f"| 已录入成品库存 | {total:,} 双 |", f"| 已录入成品库存 | {total + 17:,} 双 |",
         )
         text = re.sub(
             r"^(\| \d+ \| 黑色 \| [^|]+ \| 成品 \| )[\d,]+ 双",
@@ -87,6 +87,10 @@ class GithubInventoryPullTests(unittest.TestCase):
         self.assertEqual(settings.read_text(), '{"keep": true}\n')
         self.assertTrue((self.computer / ".git" / pull.STATE_NAME).exists())
         self.assertEqual(git(self.computer, "status", "--short"), "?? .obsidian/")
+
+    def test_legacy_summary_label(self):
+        main = (self.writer / pull.MAIN).read_text().replace("已录入成品库存", "已录入库存")
+        self.assertEqual(pull.validate_inventory(main, (self.writer / pull.PROJECT).read_text()), self.initial_inventory)
 
     def test_no_change(self):
         self.assertEqual(self.receive()["status"], "unchanged")
@@ -120,12 +124,12 @@ class GithubInventoryPullTests(unittest.TestCase):
     def test_invalid_remote_inventory_refused_before_checkout(self):
         main = self.writer / pull.MAIN
         total = self.initial_inventory["total"]
-        main.write_text(main.read_text().replace(f"| 已录入库存 | {total:,} 双 |", "| 已录入库存 | 1 双 |"))
+        main.write_text(main.read_text().replace(f"| 已录入成品库存 | {total:,} 双 |", "| 已录入成品库存 | 1 双 |"))
         self.commit_remote("invalid fixture inventory")
         with self.assertRaises(pull.PullError):
             self.receive()
         self.assert_head_preserved()
-        self.assertIn(f"| 已录入库存 | {total:,} 双 |", (self.computer / pull.MAIN).read_text())
+        self.assertIn(f"| 已录入成品库存 | {total:,} 双 |", (self.computer / pull.MAIN).read_text())
 
     def test_untracked_collision_refused(self):
         local = self.computer / ".obsidian" / "workspace.json"

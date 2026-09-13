@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Receive validated GitHub inventory commits by fast-forward only.
 
-Production remote: github.com/7744332/-AI-, branch main.
+Production remote: github.com/xianer-AI/xianer-ai-brain, branch main.
 No inventory arithmetic, commits, pushes, stashes, resets, or conflict resolution.
 """
 
@@ -21,9 +21,9 @@ MAIN = "袜子生产制造袜子厂/库存记录/2026下半年冰冰袜库存包
 PROJECT = "袜子生产制造袜子厂/README.md"
 COLORS = {"漂白", "黑色", "荧光紫", "水龙卷", "青绿", "鲜紫"}
 ALLOWED_REMOTES = {
-    "https://github.com/7744332/-AI-", "https://github.com/7744332/-AI-.git",
-    "git@github.com:7744332/-AI-", "git@github.com:7744332/-AI-.git",
-    "ssh://git@github.com/7744332/-AI-", "ssh://git@github.com/7744332/-AI-.git",
+    "https://github.com/xianer-AI/xianer-ai-brain", "https://github.com/xianer-AI/xianer-ai-brain.git",
+    "git@github.com:xianer-AI/xianer-ai-brain", "git@github.com:xianer-AI/xianer-ai-brain.git",
+    "ssh://git@github.com/xianer-AI/xianer-ai-brain", "ssh://git@github.com/xianer-AI/xianer-ai-brain.git",
 }
 PENDING_JOURNAL = "00-system/.mobile-inventory-journal.json"
 LOCK_NAME = "mobile-github-pull.lock"
@@ -75,7 +75,7 @@ def validate_remote(root, test_local):
         if output(root, "--git-dir", str(remote), "rev-parse", "--is-bare-repository", test_local=True) != "true":
             raise PullError("测试远端必须是本地 bare 仓库")
     elif urls[0] not in ALLOWED_REMOTES:
-        raise PullError("生产模式仅允许 GitHub 仓库 7744332/-AI-，拒绝其他 origin")
+        raise PullError("生产模式仅允许 GitHub 仓库 xianer-AI/xianer-ai-brain，拒绝其他 origin")
 
 
 def git_path(root, name):
@@ -124,7 +124,7 @@ def validate_inventory(main, project):
         quantities[color] = count(row.group(3))
     if len(rows) != 6 or set(quantities) != COLORS:
         raise PullError("必须提供已有六种颜色的非负成品库存")
-    total = count(unique(r"^\| 已录入库存 \| ([\d,]+) 双 \|$", main, "主记录汇总").group(1))
+    total = count(unique(r"^\| 已录入(?:成品)?库存 \| ([\d,]+) 双 \|$", main, "主记录汇总").group(1))
     color_count = unique(r"^\| 已录入颜色数 \| (\d+) 个 \|$", main, "颜色汇总").group(1)
     project_total = count(unique(r"已录入 6 个颜色，共 ([\d,]+) 双", project, "项目 README 汇总").group(1))
     if color_count != "6" or total != sum(quantities.values()) or project_total != total:
@@ -218,7 +218,7 @@ def receive(root, test_local_remote=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=Path("/Users/xianer/Desktop/个人AI知识库"))
+    parser.add_argument("--root", type=Path, default=Path("/Users/xianer/Desktop/贤二Ai大脑知识库"))
     parser.add_argument("--test-local-remote", action="store_true", help="仅供临时 fixture：允许本地 bare origin")
     args = parser.parse_args()
     try:
