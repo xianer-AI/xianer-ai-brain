@@ -97,6 +97,48 @@ class GithubInventoryPullTests(unittest.TestCase):
         main = (self.writer / pull.MAIN).read_text().replace("已录入成品库存", "已录入库存")
         self.assertEqual(pull.validate_inventory(main, (self.writer / pull.PROJECT).read_text()), self.initial_inventory)
 
+    def phone_format(self):
+        main = (self.writer / pull.MAIN).read_text()
+        main = main.replace("已录入成品库存", "当前成品库存")
+        return re.sub(r"(?<=\d) 双(?= \|)", "", main)
+
+    def test_phone_format_receives_once_with_identical_quantities(self):
+        main = self.writer / pull.MAIN
+        main.write_text(self.phone_format())
+        candidate = self.commit_remote("phone quantity format")
+        result = self.receive()
+        self.assertEqual(result["commit"], candidate)
+        self.assertEqual(result["inventory"], self.initial_inventory)
+        self.assertEqual((self.computer / pull.MAIN).read_bytes(), main.read_bytes())
+        self.assertEqual(self.receive()["status"], "unchanged")
+
+    def test_bare_counts_require_current_pairs_declaration(self):
+        main = self.phone_format()
+        for declaration in ("", "数量单位：只", "数量单位：件"):
+            invalid = main.replace("数量单位：双", declaration)
+            with self.subTest(declaration=declaration), self.assertRaises(pull.PullError):
+                pull.validate_inventory(invalid)
+        without = main.replace("数量单位：双", "")
+        with self.assertRaises(pull.PullError):
+            pull.validate_inventory(without + "\n## 旧资料\n数量单位：双\n")
+
+    def test_mixed_units_and_summary_aliases(self):
+        main = self.phone_format()
+        total = self.initial_inventory["total"]
+        mixed = main.replace(f"| 当前成品库存 | {total:,} |", f"| 当前成品库存 | {total:,} 双 |")
+        self.assertEqual(pull.validate_inventory(mixed), self.initial_inventory)
+        for row in (f"| 已录入成品库存 | {total:,} 双 |", "| 当前成品库存 | -1 |", "| 剩余未包装半成品 | -1 双 |"):
+            with self.subTest(row=row), self.assertRaises(pull.PullError):
+                pull.validate_inventory(main + "\n" + row + "\n")
+
+    def test_phone_format_rejects_wrong_counts_and_units(self):
+        main = self.phone_format()
+        total = self.initial_inventory["total"]
+        for cell in ("-1", "1.5", "1,00", "", f"{total:,} 只", f"{total:,} 件"):
+            invalid = main.replace(f"| 当前成品库存 | {total:,} |", f"| 当前成品库存 | {cell} |")
+            with self.subTest(cell=cell), self.assertRaises(pull.PullError):
+                pull.validate_inventory(invalid)
+
     def test_no_change(self):
         self.assertEqual(self.receive()["status"], "unchanged")
         self.assert_head_preserved()

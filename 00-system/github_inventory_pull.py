@@ -114,8 +114,22 @@ def count(text):
 def validate_inventory(main, project=None):
     # The main ledger is authoritative. Keep the optional argument for callers
     # using the old API; navigation summaries are checked separately below.
+    main = main.replace("\r\n", "\n")
+    # Bare counts are valid only when the ledger explicitly declares pairs.
+    preamble = main.split("## 当前汇总", 1)[0]
+    pairs_declared = re.search(r"数量单位(?:统一)?(?:为|[：:])\s*[“\"「]?双", preamble)
+    quantity = r"([\d,]+)(?: 双)?" if pairs_declared else r"([\d,]+) 双"
+
+    def summary_count(label_pattern, label):
+        # Count labels before parsing values, so an invalid duplicate cannot
+        # disappear from a numeric-only regex and bypass uniqueness checks.
+        cell = unique(r"^\| " + label_pattern + r" \| ([^|\n]*) \|$", main, label).group(1)
+        value = re.fullmatch(quantity, cell.strip())
+        if not value:
+            raise PullError(f"{label} 数字或单位无效")
+        return count(value.group(1))
     rows = list(re.finditer(
-        r"^\| \d+ \| ([^|]+) \| ([^|]+) \| 成品 \| ([\d,]+) 双 \| \d{4}-\d{2}-\d{2} \| [^\n]* \|$",
+        r"^\| \d+ \| ([^|]+) \| ([^|]+) \| 成品 \| " + quantity + r" \| \d{4}-\d{2}-\d{2} \| [^\n]* \|$",
         main, re.M,
     ))
     quantities = {}
@@ -127,13 +141,13 @@ def validate_inventory(main, project=None):
     numbered_rows = re.findall(r"^\| \d+ \|", main, re.M)
     if len(rows) != 6 or len(numbered_rows) != 6 or set(quantities) != COLORS:
         raise PullError("必须提供已有六种颜色的非负成品库存")
-    total = count(unique(r"^\| 已录入(?:成品)?库存 \| ([\d,]+) 双 \|$", main, "主记录汇总").group(1))
+    total = summary_count(r"(?:已录入(?:成品)?库存|当前成品库存)", "主记录汇总")
     color_count = unique(r"^\| 已录入颜色数 \| (\d+) 个 \|$", main, "颜色汇总").group(1)
     if color_count != "6" or total != sum(quantities.values()):
         raise PullError("主账颜色明细与成品汇总不一致")
-    remaining = count(unique(r"^\| 剩余未包装半成品 \| ([\d,]+) 双 \|$", main, "剩余未包装半成品").group(1))
-    combined = count(unique(r"^\| 当前账面总库存（半成品＋成品） \| ([\d,]+) 双 \|$", main, "账面总库存").group(1))
-    packaged = count(unique(r"^\| 累计已包装数量 \| ([\d,]+) 双 \|$", main, "累计已包装数量").group(1))
+    remaining = summary_count("剩余未包装半成品", "剩余未包装半成品")
+    combined = summary_count("当前账面总库存（半成品＋成品）", "账面总库存")
+    packaged = summary_count("累计已包装数量", "累计已包装数量")
     if total + remaining != combined:
         raise PullError("主账成品加剩余半成品与账面总库存不一致")
     date = unique(r"^更新日期：(\d{4}-\d{2}-\d{2})$", main, "更新日期").group(1)
