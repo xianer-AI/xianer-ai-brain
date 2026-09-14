@@ -52,7 +52,7 @@ class GithubInventoryPullTests(unittest.TestCase):
         git(self.writer, "push", "origin", "main")
         return git(self.writer, "rev-parse", "HEAD")
 
-    def incoming_update(self):
+    def incoming_update(self, update_summary=True):
         main = self.writer / pull.MAIN
         total = self.initial_inventory["total"]
         black = self.initial_inventory["colors"]["黑色"]
@@ -63,9 +63,14 @@ class GithubInventoryPullTests(unittest.TestCase):
             r"^(\| \d+ \| 黑色 \| [^|]+ \| 成品 \| )[\d,]+ 双",
             lambda match: f"{match.group(1)}{black + 17:,} 双", text, flags=re.M,
         )
+        remaining = self.initial_inventory["remaining"]
+        packaged = self.initial_inventory["packaged"]
+        text = text.replace(f"| 剩余未包装半成品 | {remaining:,} 双 |", f"| 剩余未包装半成品 | {remaining - 17:,} 双 |")
+        text = text.replace(f"| 累计已包装数量 | {packaged:,} 双 |", f"| 累计已包装数量 | {packaged + 17:,} 双 |")
         main.write_text(text + "\n同步检查：仅 fixture 测试记录。\n", encoding="utf-8")
         project = self.writer / pull.PROJECT
-        project.write_text(project.read_text().replace(f"共 {total:,} 双", f"共 {total + 17:,} 双"))
+        if update_summary:
+            project.write_text(project.read_text().replace(f"共 {total:,} 双", f"共 {total + 17:,} 双").replace(f"半成品 {remaining:,} 双", f"半成品 {remaining - 17:,} 双"))
         return self.commit_remote("fixture update")
 
     def receive(self):
@@ -96,6 +101,83 @@ class GithubInventoryPullTests(unittest.TestCase):
         self.assertEqual(self.receive()["status"], "unchanged")
         self.assert_head_preserved()
         self.assertEqual(git(self.computer, "status", "--porcelain"), "")
+
+    def test_stale_summary_receives_without_replaying_and_later_clears(self):
+        candidate = self.incoming_update(update_summary=False)
+        result = self.receive()
+        self.assertEqual(result["commit"], candidate)
+        self.assertEqual(result["status"], "fast_forwarded")
+        self.assertTrue(result["warnings"])
+        self.assertEqual((self.computer / pull.MAIN).read_bytes(), (self.writer / pull.MAIN).read_bytes())
+        again = self.receive()
+        self.assertEqual(again["status"], "unchanged")
+        self.assertEqual(again["inventory"], result["inventory"])
+        self.assertEqual(git(self.computer, "status", "--porcelain"), "")
+        inventory = result["inventory"]
+        (self.writer / pull.PROJECT).write_text(
+            f"已录入 6 个颜色，共 {inventory['total']:,} 双成品，剩余未包装半成品 {inventory['remaining']:,} 双，账面合计 {inventory['combined']:,} 双\n")
+        self.commit_remote("complete derived summary")
+        self.assertEqual(self.receive()["warnings"], [])
+
+    def test_missing_summary_does_not_block_ledger(self):
+        self.incoming_update()
+        (self.writer / pull.PROJECT).unlink()
+        candidate = self.commit_remote("missing summary")
+        result = self.receive()
+        self.assertEqual(result["commit"], candidate)
+        self.assertTrue(result["warnings"])
+
+    def test_malformed_and_duplicate_summaries_are_warnings(self):
+        self.assertTrue(pull.summary_warnings(self.initial_inventory, "摘要格式改变"))
+        project = (self.writer / pull.PROJECT).read_text()
+        self.assertTrue(pull.summary_warnings(self.initial_inventory, project + project))
+
+    def test_summary_crlf_line_endings_receive(self):
+        project = self.writer / pull.PROJECT
+        project.write_bytes(project.read_bytes().replace(b"\n", b"\r\n"))
+        candidate = self.commit_remote("summary CRLF")
+        self.assertEqual(self.receive()["commit"], candidate)
+        self.assertEqual((self.computer / pull.PROJECT).read_bytes(), project.read_bytes())
+
+    def test_invalid_balance_and_required_fields_refused_before_checkout(self):
+        main = self.writer / pull.MAIN
+        original = main.read_text()
+        remaining = self.initial_inventory["remaining"]
+        packaged = self.initial_inventory["packaged"]
+        row = f"| 剩余未包装半成品 | {remaining:,} 双 |"
+        variants = [
+            original.replace(row, f"| 剩余未包装半成品 | {remaining + 1:,} 双 |"),
+            original.replace(row, "| 剩余未包装半成品 | -1 双 |"),
+            original.replace(row, ""),
+            original + "\n" + row + "\n",
+            original.replace(f"| 累计已包装数量 | {packaged:,} 双 |", ""),
+        ]
+        for i, invalid in enumerate(variants):
+            with self.subTest(i=i):
+                main.write_text(invalid)
+                self.commit_remote(f"invalid balance {i}")
+                with self.assertRaises(pull.PullError):
+                    self.receive()
+                self.assert_head_preserved()
+
+    def test_shipment_and_production_need_not_equal_opening_or_packaged(self):
+        main = self.writer / pull.MAIN
+        original = main.read_text()
+        inventory = self.initial_inventory
+        total, black = inventory["total"], inventory["colors"]["黑色"]
+        # Shipment reduces finished stock and combined stock; packed stays fixed.
+        shipped = original.replace(f"| 已录入成品库存 | {total:,} 双 |", f"| 已录入成品库存 | {total - 10:,} 双 |")
+        shipped = re.sub(r"^(\| \d+ \| 黑色 \| [^|]+ \| 成品 \| )[\d,]+ 双", lambda m: f"{m.group(1)}{black - 10:,} 双", shipped, flags=re.M)
+        shipped = shipped.replace(f"| 当前账面总库存（半成品＋成品） | {inventory['combined']:,} 双 |", f"| 当前账面总库存（半成品＋成品） | {inventory['combined'] - 10:,} 双 |")
+        main.write_text(shipped)
+        self.commit_remote("shipment")
+        self.assertEqual(self.receive()["inventory"]["packaged"], inventory["packaged"])
+        # New production raises unfinished and combined stock above the opening.
+        produced = original.replace(f"| 剩余未包装半成品 | {inventory['remaining']:,} 双 |", f"| 剩余未包装半成品 | {inventory['remaining'] + 20:,} 双 |")
+        produced = produced.replace(f"| 当前账面总库存（半成品＋成品） | {inventory['combined']:,} 双 |", f"| 当前账面总库存（半成品＋成品） | {inventory['combined'] + 20:,} 双 |")
+        main.write_text(produced)
+        self.commit_remote("production fixture")
+        self.assertEqual(self.receive()["inventory"]["combined"], inventory["combined"] + 20)
 
     def test_tracked_dirty_and_index_dirty_refused(self):
         self.incoming_update()

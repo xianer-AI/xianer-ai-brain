@@ -111,7 +111,9 @@ def count(text):
     return int(text.replace(",", ""))
 
 
-def validate_inventory(main, project):
+def validate_inventory(main, project=None):
+    # The main ledger is authoritative. Keep the optional argument for callers
+    # using the old API; navigation summaries are checked separately below.
     rows = list(re.finditer(
         r"^\| \d+ \| ([^|]+) \| ([^|]+) \| 成品 \| ([\d,]+) 双 \| \d{4}-\d{2}-\d{2} \| [^\n]* \|$",
         main, re.M,
@@ -122,19 +124,46 @@ def validate_inventory(main, project):
         if color in quantities or color not in COLORS:
             raise PullError("库存颜色重复或不在已登记六色范围")
         quantities[color] = count(row.group(3))
-    if len(rows) != 6 or set(quantities) != COLORS:
+    numbered_rows = re.findall(r"^\| \d+ \|", main, re.M)
+    if len(rows) != 6 or len(numbered_rows) != 6 or set(quantities) != COLORS:
         raise PullError("必须提供已有六种颜色的非负成品库存")
     total = count(unique(r"^\| 已录入(?:成品)?库存 \| ([\d,]+) 双 \|$", main, "主记录汇总").group(1))
     color_count = unique(r"^\| 已录入颜色数 \| (\d+) 个 \|$", main, "颜色汇总").group(1)
-    project_total = count(unique(r"已录入 6 个颜色，共 ([\d,]+) 双", project, "项目 README 汇总").group(1))
-    if color_count != "6" or total != sum(quantities.values()) or project_total != total:
-        raise PullError("候选库存明细、主记录汇总或项目 README 总数不一致")
+    if color_count != "6" or total != sum(quantities.values()):
+        raise PullError("主账颜色明细与成品汇总不一致")
+    remaining = count(unique(r"^\| 剩余未包装半成品 \| ([\d,]+) 双 \|$", main, "剩余未包装半成品").group(1))
+    combined = count(unique(r"^\| 当前账面总库存（半成品＋成品） \| ([\d,]+) 双 \|$", main, "账面总库存").group(1))
+    packaged = count(unique(r"^\| 累计已包装数量 \| ([\d,]+) 双 \|$", main, "累计已包装数量").group(1))
+    if total + remaining != combined:
+        raise PullError("主账成品加剩余半成品与账面总库存不一致")
     date = unique(r"^更新日期：(\d{4}-\d{2}-\d{2})$", main, "更新日期").group(1)
-    return {"total": total, "colors": quantities, "updated_at": date}
+    return {"total": total, "colors": quantities, "updated_at": date,
+            "remaining": remaining, "combined": combined, "packaged": packaged}
 
 
-def candidate_file(root, commit, path):
+def summary_warnings(inventory, project):
+    """A missing/stale navigation summary never overrides a valid ledger."""
+    checks = (
+        (r"已录入 6 个颜色，共 ([\d,]+) 双", "total", "成品合计"),
+        (r"剩余未包装半成品 ([\d,]+) 双", "remaining", "未包装半成品"),
+        (r"账面合计 ([\d,]+) 双", "combined", "账面合计"),
+    )
+    warnings = []
+    for pattern, key, label in checks:
+        try:
+            value = count(unique(pattern, project, label).group(1))
+            if value == inventory[key]:
+                continue
+        except PullError:
+            pass
+        warnings.append(f"项目摘要{label}待补齐；库存以主账为准，不影响接收")
+    return warnings
+
+
+def candidate_file(root, commit, path, optional=False):
     entry = output(root, "ls-tree", commit, "--", path)
+    if not entry and optional:
+        return ""
     if not entry.startswith(("100644 blob ", "100755 blob ")):
         raise PullError(f"候选库存文件不存在或不是普通文件：{path}")
     blob = entry.split()[2]
@@ -194,20 +223,26 @@ def receive(root, test_local_remote=False):
                 raise PullError("检查期间电脑 HEAD 已变化，停止本轮同步")
             if git(root, "merge-base", "--is-ancestor", before, candidate, accepted=(0, 1)).returncode:
                 raise PullError("电脑分支领先或与远端分叉；不自动合并、变基或覆盖")
-            expected = validate_inventory(candidate_file(root, candidate, MAIN), candidate_file(root, candidate, PROJECT))
+            expected = validate_inventory(candidate_file(root, candidate, MAIN))
+            project = candidate_file(root, candidate, PROJECT, optional=True)
+            warnings = summary_warnings(expected, project)
             if before != candidate:
                 check_untracked_collisions(root, before, candidate)
                 if preflight(root) != before:
                     raise PullError("快进前电脑内容发生变化，停止本轮同步")
                 git(root, "merge", "--ff-only", "--no-edit", "--no-overwrite-ignore", candidate)
             actual_head = output(root, "rev-parse", "HEAD")
-            actual = validate_inventory((root / MAIN).read_text(encoding="utf-8"), (root / PROJECT).read_text(encoding="utf-8"))
+            actual = validate_inventory((root / MAIN).read_text(encoding="utf-8"))
+            actual_project = (root / PROJECT).read_bytes().decode("utf-8") if (root / PROJECT).exists() else ""
             if actual_head != candidate or actual != expected or preflight(root) != candidate:
                 raise PullError("拉取后核验不一致；保留当前内容并报告，绝不自动回滚")
+            if actual_project != project:
+                raise PullError("接收后摘要文件与远端不一致；保留当前内容并报告")
             result = {
                 "status": "unchanged" if before == candidate else "fast_forwarded",
                 "before_commit": before, "commit": candidate, "inventory": actual,
                 "mode": "github_primary_computer_receive_only",
+                "warnings": warnings,
             }
             save_state(gitdir / STATE_NAME, result)
             return result
