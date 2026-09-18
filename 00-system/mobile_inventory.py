@@ -19,7 +19,6 @@ import tempfile
 
 
 THREAD_ID = "6aa6ce99-38c4-83ea-80c2-51438053f9b4"
-COLORS = {"漂白", "黑色", "荧光紫", "水龙卷", "青绿", "鲜紫"}
 MAIN = "袜子生产制造袜子厂/库存记录/2026下半年冰冰袜库存包装统计.md"
 PROJECT = "袜子生产制造袜子厂/README.md"
 INVENTORY_INDEX = "袜子生产制造袜子厂/库存记录/README.md"
@@ -115,19 +114,19 @@ def parse_inventory(text):
     matches = list(ROW.finditer(text))
     rows = {}
     for match in matches:
-        color = match.group(2)
-        if color in rows or color not in COLORS or match.group(4) != "成品":
-            raise InventoryError("库存明细不是预期的六种颜色成品库存")
+        color = match.group(2).strip()
+        if not color or color in rows or match.group(4) != "成品":
+            raise InventoryError("库存明细颜色为空、重复或阶段无效")
         rows[color] = {"quantity": number(match.group(5)), "match": match}
-    if set(rows) != COLORS:
+    if not rows:
         raise InventoryError("库存明细缺少颜色，或表格格式已经改变")
-    summary = one(r"^\| 已录入库存 \| ([\d,]+) 双 \|$", text, "库存汇总")
+    summary = one(r"^\| (?:已录入库存|已录入成品库存|当前成品库存) \| ([\d,]+) 双 \|$", text, "库存汇总")
     total = number(summary.group(1))
     if total != sum(row["quantity"] for row in rows.values()):
-        raise InventoryError("库存汇总与六种颜色明细不一致，停止入账")
+        raise InventoryError("库存汇总与颜色明细不一致，停止入账")
     count = one(r"^\| 已录入颜色数 \| (\d+) 个 \|$", text, "颜色汇总")
-    if count.group(1) != "6":
-        raise InventoryError("颜色汇总不是 6 个")
+    if count.group(1) != str(len(rows)):
+        raise InventoryError("颜色汇总与颜色明细数量不一致")
     updated = one(r"^更新日期：(\d{4}-\d{2}-\d{2})$", text, "更新日期")
     return rows, total, updated.group(1)
 
@@ -154,8 +153,8 @@ def validate_command(command):
         raise InventoryError("source_text 必须是完整且简短的用户库存指令")
     if any(marker in source for marker in RECEIPT_MARKERS):
         raise InventoryError("系统回执或同步测试不能作为库存指令")
-    if not isinstance(command["color"], str) or not isinstance(command["operation"], str) or command["color"] not in COLORS or command["operation"] not in {"add", "subtract", "set"}:
-        raise InventoryError("仅支持已有六种颜色，以及 add/subtract/set")
+    if not isinstance(command["color"], str) or not command["color"].strip() or not isinstance(command["operation"], str) or command["operation"] not in {"add", "subtract", "set"}:
+        raise InventoryError("颜色不能为空，且 operation 只能是 add/subtract/set")
     if type(command["quantity"]) is not int or command["quantity"] < 0:
         raise InventoryError("quantity 必须是非负整数，单位为双")
     if not isinstance(command["date"], str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", command["date"]):
@@ -176,6 +175,8 @@ def build_transaction(root, command, state, state_before):
     originals = {path: read(root, path) for path in BUSINESS_FILES}
     main = originals[MAIN]
     rows, old_total, updated = parse_inventory(main)
+    if command["color"] not in rows:
+        raise InventoryError("指令颜色不在当前库存明细中")
     if command["date"] < updated:
         raise InventoryError("指令日期早于主记录更新日期，请核实后再入账")
     before = rows[command["color"]]["quantity"]
@@ -197,7 +198,12 @@ def build_transaction(root, command, state, state_before):
     )
     main = main[:row.start()] + new_row + main[row.end():]
     main = replace_one(r"^更新日期：\d{4}-\d{2}-\d{2}$", f"更新日期：{command['date']}", main, "更新日期")
-    main = replace_one(r"^\| 已录入库存 \| [\d,]+ 双 \|$", f"| 已录入库存 | {total:,} 双 |", main, "库存汇总")
+    main = replace_one(
+        r"^\| (?:已录入库存|已录入成品库存|当前成品库存) \| [\d,]+ 双 \|$",
+        f"| 已录入成品库存 | {total:,} 双 |",
+        main,
+        "库存汇总",
+    )
     source = " ".join(command["source_text"].split()).replace("|", "\\|")
     history = (
         f"| {command['date']} | 手机指令“{source}”；{command['color']}成品由 {before:,} 双"
@@ -209,12 +215,17 @@ def build_transaction(root, command, state, state_before):
     end = history_section.start(2) + len(history_section.group(2).rstrip())
     main = main[:end] + "\n" + history.rstrip() + main[end:]
     parse_inventory(main)
-    project_match = one(r"已录入 6 个颜色，共 ([\d,]+) 双", originals[PROJECT], "项目汇总")
-    if number(project_match.group(1)) != old_total:
+    project_match = one(r"已录入 (\d+) 个颜色，共 ([\d,]+) 双", originals[PROJECT], "项目汇总")
+    if project_match.group(1) != str(len(rows)) or number(project_match.group(2)) != old_total:
         raise InventoryError("袜子项目 README 汇总与主记录不一致")
     replacements = {
         MAIN: main,
-        PROJECT: replace_one(r"已录入 6 个颜色，共 [\d,]+ 双", f"已录入 6 个颜色，共 {total:,} 双", originals[PROJECT], "项目汇总"),
+        PROJECT: replace_one(
+            r"已录入 \d+ 个颜色，共 [\d,]+ 双",
+            f"已录入 {len(rows)} 个颜色，共 {total:,} 双",
+            originals[PROJECT],
+            "项目汇总",
+        ),
         INVENTORY_INDEX: replace_one(
             r"包含自 (\d{4}-\d{2}-\d{2}) 至 \d{4}-\d{2}-\d{2} 的更新内容",
             lambda m: f"包含自 {m.group(1)} 至 {command['date']} 的更新内容", originals[INVENTORY_INDEX], "库存索引日期"),

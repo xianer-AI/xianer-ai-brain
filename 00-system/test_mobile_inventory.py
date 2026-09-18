@@ -98,7 +98,10 @@ class MobileInventoryTests(unittest.TestCase):
     def test_wrong_summary_refuses_write(self):
         target = self.root / inventory.MAIN
         text = target.read_text(encoding="utf-8")
-        text = text.replace(f"| 已录入库存 | {self.initial['total']:,} 双 |", "| 已录入库存 | 1 双 |")
+        text = text.replace(
+            f"| 已录入成品库存 | {self.initial['total']:,} 双 |",
+            "| 已录入成品库存 | 1 双 |",
+        )
         target.write_text(text, encoding="utf-8")
         before = self.all_contents()
         with self.assertRaises(inventory.InventoryError):

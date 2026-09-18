@@ -99,18 +99,18 @@ class GithubInventoryPullTests(unittest.TestCase):
 
     def test_new_color_is_accepted_when_ledger_is_consistent(self):
         main = (self.writer / pull.MAIN).read_text()
-        main = main.replace("| 已录入颜色数 | 6 个 |", "| 已录入颜色数 | 7 个 |")
-        main = main.replace("| 累计已包装数量 | 82,894 双 |", "| 累计已包装数量 | 92,844 双 |")
-        main = main.replace("| 剩余未包装半成品 | 417,106 双 |", "| 剩余未包装半成品 | 407,156 双 |")
-        main = main.replace("| 已录入成品库存 | 67,894 双 |", "| 已录入成品库存 | 77,844 双 |")
+        main = main.replace("| 已录入颜色数 | 7 个 |", "| 已录入颜色数 | 8 个 |")
+        main = main.replace("| 累计已包装数量 | 92,844 双 |", "| 累计已包装数量 | 101,344 双 |")
+        main = main.replace("| 剩余未包装半成品 | 407,156 双 |", "| 剩余未包装半成品 | 398,656 双 |")
+        main = main.replace("| 已录入成品库存 | 77,844 双 |", "| 已录入成品库存 | 86,344 双 |")
         main = main.replace(
-            "| 6 | 鲜紫 | 冰冰袜（夏季堆堆袜） | 成品 | 3,000 双 | 2026-09-13 | 用户口述录入 |\n",
-            "| 6 | 鲜紫 | 冰冰袜（夏季堆堆袜） | 成品 | 3,000 双 | 2026-09-13 | 用户口述录入 |\n"
             "| 7 | 天兰 | 冰冰袜（夏季堆堆袜） | 成品 | 9,950 双 | 2026-09-18 | 首次录入，按包装转入处理 |\n",
+            "| 7 | 天兰 | 冰冰袜（夏季堆堆袜） | 成品 | 9,950 双 | 2026-09-18 | 首次录入，按包装转入处理 |\n"
+            "| 8 | 奶黄 | 冰冰袜（夏季堆堆袜） | 成品 | 8,500 双 | 2026-09-18 | 首次录入，按包装转入处理 |\n",
         )
         inventory = pull.validate_inventory(main)
-        self.assertEqual(inventory["total"], 77_844)
-        self.assertEqual(inventory["colors"]["天兰"], 9_950)
+        self.assertEqual(inventory["total"], 86_344)
+        self.assertEqual(inventory["colors"]["奶黄"], 8_500)
 
     def phone_format(self):
         main = (self.writer / pull.MAIN).read_text()
