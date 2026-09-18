@@ -19,7 +19,6 @@ import tempfile
 
 MAIN = "袜子生产制造袜子厂/库存记录/2026下半年冰冰袜库存包装统计.md"
 PROJECT = "袜子生产制造袜子厂/README.md"
-COLORS = {"漂白", "黑色", "荧光紫", "水龙卷", "青绿", "鲜紫"}
 ALLOWED_REMOTES = {
     "https://github.com/xianer-AI/xianer-ai-brain", "https://github.com/xianer-AI/xianer-ai-brain.git",
     "git@github.com:xianer-AI/xianer-ai-brain", "git@github.com:xianer-AI/xianer-ai-brain.git",
@@ -134,16 +133,16 @@ def validate_inventory(main, project=None):
     ))
     quantities = {}
     for row in rows:
-        color = row.group(1)
-        if color in quantities or color not in COLORS:
-            raise PullError("库存颜色重复或不在已登记六色范围")
+        color = row.group(1).strip()
+        if not color or color in quantities:
+            raise PullError("库存颜色为空或重复")
         quantities[color] = count(row.group(3))
     numbered_rows = re.findall(r"^\| \d+ \|", main, re.M)
-    if len(rows) != 6 or len(numbered_rows) != 6 or set(quantities) != COLORS:
-        raise PullError("必须提供已有六种颜色的非负成品库存")
+    if not rows or len(rows) != len(numbered_rows) or len(quantities) != len(rows):
+        raise PullError("必须提供不重复的非负成品库存明细")
     total = summary_count(r"(?:已录入(?:成品)?库存|当前成品库存)", "主记录汇总")
     color_count = unique(r"^\| 已录入颜色数 \| (\d+) 个 \|$", main, "颜色汇总").group(1)
-    if color_count != "6" or total != sum(quantities.values()):
+    if color_count != str(len(quantities)) or total != sum(quantities.values()):
         raise PullError("主账颜色明细与成品汇总不一致")
     remaining = summary_count("剩余未包装半成品", "剩余未包装半成品")
     combined = summary_count("当前账面总库存（半成品＋成品）", "账面总库存")
