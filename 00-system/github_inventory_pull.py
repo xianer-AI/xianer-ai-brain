@@ -157,7 +157,7 @@ def validate_inventory(main, project=None):
 def summary_warnings(inventory, project):
     """A missing/stale navigation summary never overrides a valid ledger."""
     checks = (
-        (r"已录入 6 个颜色，共 ([\d,]+) 双", "total", "成品合计"),
+        (r"已录入 \d+ 个颜色，共 ([\d,]+) 双", "total", "成品合计"),
         (r"剩余未包装半成品 ([\d,]+) 双", "remaining", "未包装半成品"),
         (r"账面合计 ([\d,]+) 双", "combined", "账面合计"),
     )
