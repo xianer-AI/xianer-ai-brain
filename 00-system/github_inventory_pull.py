@@ -19,6 +19,8 @@ import tempfile
 
 MAIN = "袜子生产制造袜子厂/库存记录/2026下半年冰冰袜库存包装统计.md"
 PROJECT = "袜子生产制造袜子厂/README.md"
+INVENTORY_README = "袜子生产制造袜子厂/库存记录/README.md"
+INDEX = "03-index/index.md"
 ALLOWED_REMOTES = {
     "https://github.com/xianer-AI/xianer-ai-brain", "https://github.com/xianer-AI/xianer-ai-brain.git",
     "git@github.com:xianer-AI/xianer-ai-brain", "git@github.com:xianer-AI/xianer-ai-brain.git",
@@ -154,7 +156,7 @@ def validate_inventory(main, project=None):
             "remaining": remaining, "combined": combined, "packaged": packaged}
 
 
-def summary_warnings(inventory, project):
+def summary_warnings(inventory, project, inventory_readme="", index=""):
     """A missing/stale navigation summary never overrides a valid ledger."""
     checks = (
         (r"已录入 \d+ 个颜色，共 ([\d,]+) 双", "total", "成品合计"),
@@ -170,6 +172,36 @@ def summary_warnings(inventory, project):
         except PullError:
             pass
         warnings.append(f"项目摘要{label}待补齐；库存以主账为准，不影响接收")
+    date_checks = (
+        (project, r"账面合计 [\d,]+ 双（(\d{4}-\d{2}-\d{2})）", inventory["updated_at"], "项目摘要更新日期"),
+        (inventory_readme, r"包含自 \d{4}-\d{2}-\d{2} 至 (\d{4}-\d{2}-\d{2}) 的更新内容", inventory["updated_at"], "库存目录更新日期"),
+        (index, r"最近更新于 (\d{4}-\d{2}-\d{2})，", inventory["updated_at"], "索引更新日期"),
+    )
+    for text, pattern, expected, label in date_checks:
+        if not text:
+            continue
+        try:
+            value = unique(pattern, text, label).group(1)
+            if value == expected:
+                continue
+        except PullError:
+            pass
+        warnings.append(f"{label}待补齐；库存以主账为准，不影响接收")
+    index_checks = (
+        (r"成品合计 ([\d,]+) 双", "total", "索引成品合计"),
+        (r"剩余未包装半成品 ([\d,]+) 双", "remaining", "索引未包装半成品"),
+        (r"账面合计 ([\d,]+) 双", "combined", "索引账面合计"),
+    )
+    for pattern, key, label in index_checks:
+        if not index:
+            continue
+        try:
+            value = count(unique(pattern, index, label).group(1))
+            if value == inventory[key]:
+                continue
+        except PullError:
+            pass
+        warnings.append(f"{label}待补齐；库存以主账为准，不影响接收")
     return warnings
 
 
@@ -238,7 +270,9 @@ def receive(root, test_local_remote=False):
                 raise PullError("电脑分支领先或与远端分叉；不自动合并、变基或覆盖")
             expected = validate_inventory(candidate_file(root, candidate, MAIN))
             project = candidate_file(root, candidate, PROJECT, optional=True)
-            warnings = summary_warnings(expected, project)
+            inventory_readme = candidate_file(root, candidate, INVENTORY_README, optional=True)
+            index = candidate_file(root, candidate, INDEX, optional=True)
+            warnings = summary_warnings(expected, project, inventory_readme, index)
             if before != candidate:
                 check_untracked_collisions(root, before, candidate)
                 if preflight(root) != before:

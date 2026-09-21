@@ -186,7 +186,7 @@ class GithubInventoryPullTests(unittest.TestCase):
         self.assertEqual(git(self.computer, "status", "--porcelain"), "")
         inventory = result["inventory"]
         (self.writer / pull.PROJECT).write_text(
-            f"已录入 {len(inventory['colors'])} 个颜色，共 {inventory['total']:,} 双成品，剩余未包装半成品 {inventory['remaining']:,} 双，账面合计 {inventory['combined']:,} 双\n")
+            f"已录入 {len(inventory['colors'])} 个颜色，共 {inventory['total']:,} 双成品，剩余未包装半成品 {inventory['remaining']:,} 双，账面合计 {inventory['combined']:,} 双（{inventory['updated_at']}）\n")
         self.commit_remote("complete derived summary")
         self.assertEqual(self.receive()["warnings"], [])
 
@@ -202,6 +202,14 @@ class GithubInventoryPullTests(unittest.TestCase):
         self.assertTrue(pull.summary_warnings(self.initial_inventory, "摘要格式改变"))
         project = (self.writer / pull.PROJECT).read_text()
         self.assertTrue(pull.summary_warnings(self.initial_inventory, project + project))
+
+    def test_stale_navigation_summaries_are_warnings(self):
+        project = (self.writer / pull.PROJECT).read_text()
+        inventory_readme = "当前唯一库存主记录，包含自 2026-09-06 至 2026-09-19 的更新内容。"
+        index = "最近更新于 2026-09-19，已录入 9 个颜色，成品合计 108,844 双，剩余未包装半成品 376,156 双，账面合计 485,000 双。"
+        warnings = pull.summary_warnings(self.initial_inventory, project, inventory_readme, index)
+        self.assertTrue(any("库存目录更新日期" in warning for warning in warnings))
+        self.assertTrue(any("索引成品合计" in warning for warning in warnings))
 
     def test_summary_crlf_line_endings_receive(self):
         project = self.writer / pull.PROJECT
