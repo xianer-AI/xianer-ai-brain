@@ -99,18 +99,32 @@ class GithubInventoryPullTests(unittest.TestCase):
 
     def test_new_color_is_accepted_when_ledger_is_consistent(self):
         main = (self.writer / pull.MAIN).read_text()
-        main = main.replace("| 已录入颜色数 | 9 个 |", "| 已录入颜色数 | 10 个 |")
-        main = main.replace("| 累计已包装数量 | 123,844 双 |", "| 累计已包装数量 | 132,344 双 |")
-        main = main.replace("| 剩余未包装半成品 | 376,156 双 |", "| 剩余未包装半成品 | 367,656 双 |")
-        main = main.replace("| 已录入成品库存 | 108,844 双 |", "| 已录入成品库存 | 117,344 双 |")
+        inventory = self.initial_inventory
+        added = 8_500
+        main = main.replace(
+            f"| 已录入颜色数 | {len(inventory['colors'])} 个 |",
+            f"| 已录入颜色数 | {len(inventory['colors']) + 1} 个 |",
+        )
+        main = main.replace(
+            f"| 累计已包装数量 | {inventory['packaged']:,} 双 |",
+            f"| 累计已包装数量 | {inventory['packaged'] + added:,} 双 |",
+        )
+        main = main.replace(
+            f"| 剩余未包装半成品 | {inventory['remaining']:,} 双 |",
+            f"| 剩余未包装半成品 | {inventory['remaining'] - added:,} 双 |",
+        )
+        main = main.replace(
+            f"| 已录入成品库存 | {inventory['total']:,} 双 |",
+            f"| 已录入成品库存 | {inventory['total'] + added:,} 双 |",
+        )
         main = main.replace(
             "| 9 | 荧光橙 | 冰冰袜（夏季堆堆袜） | 成品 | 8,000 双 | 2026-09-19 | 首次录入，按包装转入处理 |\n",
             "| 9 | 荧光橙 | 冰冰袜（夏季堆堆袜） | 成品 | 8,000 双 | 2026-09-19 | 首次录入，按包装转入处理 |\n"
             "| 10 | 奶黄 | 冰冰袜（夏季堆堆袜） | 成品 | 8,500 双 | 2026-09-19 | 首次录入，按包装转入处理 |\n",
         )
-        inventory = pull.validate_inventory(main)
-        self.assertEqual(inventory["total"], 117_344)
-        self.assertEqual(inventory["colors"]["奶黄"], 8_500)
+        updated = pull.validate_inventory(main)
+        self.assertEqual(updated["total"], inventory["total"] + added)
+        self.assertEqual(updated["colors"]["奶黄"], added)
 
     def phone_format(self):
         main = (self.writer / pull.MAIN).read_text()
@@ -172,7 +186,7 @@ class GithubInventoryPullTests(unittest.TestCase):
         self.assertEqual(git(self.computer, "status", "--porcelain"), "")
         inventory = result["inventory"]
         (self.writer / pull.PROJECT).write_text(
-            f"已录入 6 个颜色，共 {inventory['total']:,} 双成品，剩余未包装半成品 {inventory['remaining']:,} 双，账面合计 {inventory['combined']:,} 双\n")
+            f"已录入 {len(inventory['colors'])} 个颜色，共 {inventory['total']:,} 双成品，剩余未包装半成品 {inventory['remaining']:,} 双，账面合计 {inventory['combined']:,} 双\n")
         self.commit_remote("complete derived summary")
         self.assertEqual(self.receive()["warnings"], [])
 
