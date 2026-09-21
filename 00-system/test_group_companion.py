@@ -28,10 +28,13 @@ class ChatJobsTests(unittest.TestCase):
                     ("uncertain-1", "sender-1", "{}", "xiaowen", "sending", now - 400, "lease", now - 1, 1),
                 )
             self.assertIsNone(chat_jobs.claim(db))
-            with sqlite3.connect(db) as connection:
+            connection = sqlite3.connect(db)
+            try:
                 state, lease, error = connection.execute(
                     "SELECT state,lease,error FROM jobs WHERE id='uncertain-1'"
                 ).fetchone()
+            finally:
+                connection.close()
             self.assertEqual(state, "uncertain")
             self.assertIsNone(lease)
             self.assertEqual(error, "send_result_unknown")
