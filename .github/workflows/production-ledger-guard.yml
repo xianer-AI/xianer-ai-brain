@@ -1,0 +1,37 @@
+name: 生产台账防覆盖校验
+on:
+  pull_request:
+    paths:
+      - '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
+      - '袜子生产制造袜子厂/guard_production_ledger.py'
+      - '.github/workflows/production-ledger-guard.yml'
+  push:
+    branches: [main]
+    paths:
+      - '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
+      - '袜子生产制造袜子厂/guard_production_ledger.py'
+      - '.github/workflows/production-ledger-guard.yml'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 比对原有记录并重新计算累计
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          LEDGER='袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
+          if [ "$EVENT" = "pull_request" ]; then
+            BASE="$(git merge-base "$BASE_REF" HEAD)"
+          else
+            BASE="$BEFORE"
+          fi
+          git show "$BASE:$LEDGER" > /tmp/production-ledger-before.md
+          python3 '袜子生产制造袜子厂/guard_production_ledger.py' /tmp/production-ledger-before.md "$LEDGER"
