@@ -8,16 +8,18 @@ import re
 import sys
 from pathlib import Path
 
-WORKERS = {"A": "徐超超", "B": "梅芳", "C": "李鸿玉"}
+WORKERS = {"A": "徐超超", "B": "梅芳", "C": "李鸿玉", "D": "张小翠"}
 PRODUCTS = ("棉堆堆袜", "冰冰袜", "小腿袜", "过膝袜", "女船袜", "男船袜")
-ROW = re.compile(r"^\| (20\d{6}-[ABC]-\d{3}) \| ([^|]+) \| (\d+) \| ([^|]+) \|$", re.M)
+ROW = re.compile(r"^\| (20\d{6}-[ABCD]-\d{3}) \| ([^|]+) \| (\d+) \| ([^|]+) \|$", re.M)
 MESSAGE = re.compile(r"^(?:来源消息|确认消息)：(om_[a-zA-Z0-9]+)$", re.M)
 
 
-def detail(text, code):
+def detail(text, code, required=True):
     start = text.find("## " + code + "｜")
     if start < 0:
-        raise ValueError(f"缺少 {code} 个人区")
+        if required:
+            raise ValueError(f"缺少 {code} 个人区")
+        return ""
     end = text.find("\n## ", start + 3)
     return text[start:end if end >= 0 else None]
 
@@ -25,7 +27,10 @@ def detail(text, code):
 def records(text):
     result = {}
     for code in WORKERS:
-        for key, product, qty, status in ROW.findall(detail(text, code)):
+        # A newly registered worker may be absent from the pre-change
+        # baseline. Treat that as an empty historical section; the candidate
+        # is still required to contain the worker's section via totals().
+        for key, product, qty, status in ROW.findall(detail(text, code, required=False)):
             if key in result:
                 raise ValueError(f"重复记录编号：{key}")
             if key.split("-")[1] != code or product.strip() not in PRODUCTS:
@@ -54,7 +59,7 @@ def totals(text, rows):
                 raise ValueError(f"{name} {product} 个人累计 {shown} 与明细 {amount} 不符")
             if shown == "核实" and amount:
                 raise ValueError(f"{name} {product} 有已报数却仍标核实")
-        label = {"A": "A已报小计", "B": "B个人小计", "C": "C已报小计"}[code]
+        label = {"A": "A已报小计", "B": "B个人小计", "C": "C已报小计", "D": "D已报小计"}[code]
         matches = re.findall(r"^\| " + label + r" \| (\d+) \|", month.group(1), re.M)
         if len(matches) != 1 or int(matches[0]) != sum(sums.values()):
             raise ValueError(f"{name} 个人小计与明细不符")
