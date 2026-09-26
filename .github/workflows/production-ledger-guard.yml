@@ -4,12 +4,16 @@ on:
     paths:
       - '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
       - '袜子生产制造袜子厂/guard_production_ledger.py'
+      - '袜子生产制造袜子厂/production_summary_guard.py'
+      - '袜子生产制造袜子厂/test_production_summary_guard.py'
       - '.github/workflows/production-ledger-guard.yml'
   push:
     branches: [main]
     paths:
       - '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
       - '袜子生产制造袜子厂/guard_production_ledger.py'
+      - '袜子生产制造袜子厂/production_summary_guard.py'
+      - '袜子生产制造袜子厂/test_production_summary_guard.py'
       - '.github/workflows/production-ledger-guard.yml'
 jobs:
   verify:
@@ -35,3 +39,9 @@ jobs:
           fi
           git show "$BASE:$LEDGER" > /tmp/production-ledger-before.md
           python3 '袜子生产制造袜子厂/guard_production_ledger.py' /tmp/production-ledger-before.md "$LEDGER"
+      - name: 校验每日汇总与生产明细一致
+        run: |
+          set -euo pipefail
+          python3 '袜子生产制造袜子厂/production_summary_guard.py' \
+            '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
+          python3 -m unittest '袜子生产制造袜子厂/test_production_summary_guard.py'
