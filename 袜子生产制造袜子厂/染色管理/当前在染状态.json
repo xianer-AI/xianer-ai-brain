@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "updated_at": "2026-09-26",
+  "source_of_truth": "染色流水.md",
+  "rules": {
+    "pool_key": ["染厂", "产品", "颜色"],
+    "current_dyeing_formula": "累计进厂-累计染厂发回",
+    "sent_not_received_formula": "累计染厂发回-累计家里实收",
+    "allow_negative_current_dyeing": false,
+    "force_batch_matching": false
+  },
+  "pools": []
+}
