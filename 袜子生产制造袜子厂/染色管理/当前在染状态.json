@@ -25,8 +25,10 @@
   "receipt_completion_rule": "累计正式实收等于累计正式送染时，在染为0；未全部收到的数量继续保留在染",
   "unpriced_color_policy": "小腿袜黑色和白色以外的颜色标记待定价，不得猜价",
   "ambiguous_product_policy": "只说船袜而未说明男女时先询问，不猜测产品",
+  "small_bag_pricing_policy": "冰冰袜小包按件计费，200元/件；不得套用普通冰冰袜颜色单价",
   "products": [
     "冰冰袜",
+    "冰冰袜小包",
     "木耳边冰冰袜",
     "女船袜",
     "男船袜",
