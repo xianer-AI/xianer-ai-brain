@@ -90,7 +90,10 @@ def summary_rows(text: str) -> dict[tuple[str, str], tuple[str, ...]]:
     start = text.find("### 2026年9月每日汇总")
     if start < 0:
         raise ValueError("缺少 2026年9月每日汇总区")
-    end = text.find("\n## 三、", start)
+    # Daily summaries span the September-to-December month blocks.  The old
+    # boundary stopped at the October heading, so a valid 10/01 detail row was
+    # falsely reported as missing from the daily summary.
+    end = text.find("\n## 七、", start)
     section = text[start : end if end >= 0 else None]
     headings = list(SUMMARY_HEADING.finditer(section))
     rows: dict[tuple[str, str], tuple[str, ...]] = {}
