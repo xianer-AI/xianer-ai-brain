@@ -401,10 +401,12 @@ class ReviewCardRetryTests(unittest.TestCase):
                 with q.conn(db) as c:
                     row = c.execute("SELECT status,attempts FROM confirmation_receipts WHERE message_id='om_claimed'").fetchone()
                 self.assertEqual(row['attempts'], expected)
-                self.assertEqual(row['status'], 'blocked' if expected == 3 else 'pending_dispatch')
-            self.assertFalse(review_cards.claim_confirmation_dispatch(db, 'om_claimed'))
+                self.assertEqual(row['status'], 'pending_dispatch')
+            # A transient upload failure remains retryable after the former
+            # three-attempt threshold; the employee never needs to reconfirm.
+            self.assertTrue(review_cards.claim_confirmation_dispatch(db, 'om_claimed'))
 
-    def test_failed_dispatch_stops_after_bounded_attempts(self):
+    def test_failed_dispatch_keeps_retrying_after_old_bounded_attempts(self):
         with tempfile.TemporaryDirectory() as d:
             db = str(Path(d) / 'inbox.sqlite')
             q.init(db)
@@ -420,17 +422,18 @@ class ReviewCardRetryTests(unittest.TestCase):
 
             review_cards.mark_confirmation_dispatch_failed(db, 'om_blocked', 'guard failed')
             with q.conn(db) as c:
-                row = c.execute("SELECT status,error,next_at FROM confirmation_receipts WHERE message_id='om_blocked'").fetchone()
-            self.assertEqual(row['status'], 'blocked')
+                row = c.execute("SELECT status,error,error_detail,next_at FROM confirmation_receipts WHERE message_id='om_blocked'").fetchone()
+            self.assertEqual(row['status'], 'pending_dispatch')
             self.assertEqual(row['error'], 'guard failed')
-            self.assertGreater(row['next_at'], now + 3600)
+            self.assertEqual(row['error_detail'], 'guard failed')
+            self.assertGreater(row['next_at'], now)
 
-            # A late failure callback must not reopen a quarantined receipt.
+            # A late failure callback must not lose the retryable state.
             review_cards.record_failed_confirmation(
                 db, '准确', 'ou_a', review_cards.GROUP, 'om_blocked', 'late callback')
             with q.conn(db) as c:
                 row = c.execute("SELECT status FROM confirmation_receipts WHERE message_id='om_blocked'").fetchone()
-            self.assertEqual(row['status'], 'blocked')
+            self.assertEqual(row['status'], 'pending_dispatch')
 
     def test_verified_upload_failure_only_queues_feishu_reply(self):
         with tempfile.TemporaryDirectory() as d:
@@ -651,7 +654,7 @@ class ReviewCardRetryTests(unittest.TestCase):
                 self.assertEqual(tuple(row), ('confirmed', 'om_old_confirm', 'bound'))
                 self.assertEqual(c.execute("SELECT count(*) FROM confirmation_receipts WHERE source='om_source'").fetchone()[0], 1)
 
-    def test_known_false_positive_blocked_confirmation_can_be_requeued(self):
+    def test_legacy_blocked_confirmation_is_requeued_by_init(self):
         with tempfile.TemporaryDirectory() as d:
             db = str(Path(d) / 'inbox.sqlite')
             q.init(db)
@@ -663,11 +666,10 @@ class ReviewCardRetryTests(unittest.TestCase):
                     ('om_confirm', 'ou_a', review_cards.GROUP, '准确', 'om_source',
                      'tok', 'blocked', 'ValueError: 确定性上传失败：B员工2026-09-20已有有效记录，禁止重复补报',
                      3, 9999999999, 0))
-            result = review_cards.requeue_blocked_confirmation(db, 'om_confirm')
-            self.assertEqual(result['status'], 'pending_dispatch')
+            review_cards.init(db)
             with q.conn(db) as c:
                 row = c.execute("SELECT status,attempts,worker_pid FROM confirmation_receipts WHERE message_id='om_confirm'").fetchone()
-            self.assertEqual(tuple(row), ('pending_dispatch', 0, None))
+            self.assertEqual(tuple(row), ('pending_dispatch', 3, None))
 
     def test_requeue_rejects_unrelated_blocked_confirmation(self):
         with tempfile.TemporaryDirectory() as d:
@@ -680,7 +682,7 @@ class ReviewCardRetryTests(unittest.TestCase):
                     VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
                     ('om_confirm', 'ou_a', review_cards.GROUP, '准确', 'om_source',
                      'tok', 'blocked', 'ValueError: 原报数已改变', 3, 9999999999, 0))
-            with self.assertRaisesRegex(ValueError, '已知的补报占位误判'):
+            with self.assertRaisesRegex(ValueError, '当前状态为 pending_dispatch'):
                 review_cards.requeue_blocked_confirmation(db, 'om_confirm')
 
 

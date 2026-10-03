@@ -194,6 +194,21 @@ class DeterministicCandidateTests(unittest.TestCase):
         self.assertIn('确认消息：om_20270102_confirm', candidate)
         self.assertNotIn('✓ 1月2日', candidate)
 
+    def test_numbered_update_log_keeps_status_confirmation_ids(self):
+        """Choices 1/2 must remain auditable in the numbered live ledger."""
+        before = self.before.replace('## 更新记录', '## 十一、更新记录')
+        report = {
+            'worker': 'B', 'name': '梅芳', 'process': '下机',
+            'production_date': '2026-10-02',
+            'values': dict(zip(uploader.PRODUCTS, [0, 0, 0, 0, 0, 0])),
+            'missing_products': set(), 'not_worked': True,
+        }
+        candidate = uploader.build_candidate(
+            before, report, 'om_numbered_status', 'om_numbered_confirm',
+        )
+        self.assertIn('来源消息：om_numbered_status', candidate)
+        self.assertIn('确认消息：om_numbered_confirm', candidate)
+
     def test_ledger_endpoint_is_year_scoped(self):
         self.assertIn('2026下半年', uploader.commit_guard.endpoint_for_date('2026-12-31'))
         self.assertIn('2027全年', uploader.commit_guard.endpoint_for_date('2027-01-01'))

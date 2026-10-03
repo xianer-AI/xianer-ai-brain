@@ -904,10 +904,14 @@ def _update_daily(text, worker, report):
 
 
 def _update_log(text, report, source, confirmation):
-    marker = '## 更新记录'
-    start = text.find(marker)
-    if start < 0:
+    # The live ledger keeps the audit heading numbered (for example
+    # ``## 十一、更新记录``).  Match both the legacy unnumbered heading and
+    # the numbered form; otherwise status-only confirmations (choices 1/2)
+    # lose their source/confirmation IDs before commit_guard runs.
+    marker_match = re.search(r'^#{2,3} (?:[一二三四五六七八九十百]+、)?更新记录\s*$', text, re.M)
+    if not marker_match:
         return text
+    start = marker_match.start()
     header = text.find('| 日期 | 更新内容 | 结果 |', start)
     modern_header = False
     if header < 0:

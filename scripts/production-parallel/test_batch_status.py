@@ -152,7 +152,7 @@ class BatchStatusTests(unittest.TestCase):
             self.assertNotIn('重新', status['reason'])
             self.assertNotIn('重报', status['reason'])
 
-    def test_latest_actionable_batch_keeps_failed_upload_visible(self):
+    def test_latest_actionable_batch_keeps_retryable_upload_visible(self):
         with tempfile.TemporaryDirectory() as directory:
             db = str(Path(directory) / 'inbox.sqlite')
             q.init(db)
@@ -166,7 +166,8 @@ class BatchStatusTests(unittest.TestCase):
 
             status = latest_actionable_batch(db, 'ou_a', review_cards.GROUP)
 
-            self.assertEqual(status['state'], 'upload_failed')
+            self.assertEqual(status['state'], 'confirmed')
+            self.assertEqual(status['upload_state'], 'queued')
 
     def test_verified_github_waits_for_success_reply_receipt(self):
         with tempfile.TemporaryDirectory() as directory:

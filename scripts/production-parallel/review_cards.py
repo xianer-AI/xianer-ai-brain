@@ -6,11 +6,24 @@ import queue_store as q
 import card_builder
 GROUP='oc_1f8587b1bcde12a0d1bb6053ab2b748a'
 OWNER='ou_de130236fb86ee826e0f5653f05bc9c6'
-# A deterministic failure is normally retried once or twice for transient
-# handoff issues.  A fixed preflight/guard failure must stop instead of
-# creating an unbounded 30-second retry loop.
+# Upload failures must never invalidate an employee's confirmed batch.  The
+# attempt count remains useful for diagnostics, but it is no longer a hard
+# stop: a remote SHA race, gateway restart, or temporary GitHub failure can be
+# recovered without asking the employee to confirm again.
 MAX_DISPATCH_ATTEMPTS = 3
 MAX_REPLY_ATTEMPTS = 3
+DISPATCH_RETRY_BASE_SECONDS = 30
+DISPATCH_RETRY_MAX_SECONDS = 1800
+
+
+def _dispatch_retry_delay(attempts):
+ """Return a bounded exponential retry delay for an upload attempt."""
+ try:
+  count = max(1, int(attempts or 1))
+ except (TypeError, ValueError):
+  count = 1
+ return min(DISPATCH_RETRY_MAX_SECONDS,
+            DISPATCH_RETRY_BASE_SECONDS * (2 ** min(count - 1, 6)))
 
 def _verified_upload_receipt(db, source, confirmation=None):
  """Return whether this exact source already has a verified GitHub upload."""
@@ -56,8 +69,10 @@ def init(db):
   c.execute('''CREATE TABLE IF NOT EXISTS confirmation_receipts(
     message_id TEXT PRIMARY KEY, sender TEXT NOT NULL, grp TEXT NOT NULL,
     text TEXT NOT NULL, source TEXT, token TEXT, status TEXT NOT NULL,
-    error TEXT, attempts INTEGER NOT NULL DEFAULT 0,
+    error TEXT, error_detail TEXT, attempts INTEGER NOT NULL DEFAULT 0,
     next_at REAL NOT NULL, created REAL NOT NULL)''')
+  try: c.execute('ALTER TABLE confirmation_receipts ADD COLUMN error_detail TEXT')
+  except Exception: pass
   try: c.execute('ALTER TABLE confirmation_receipts ADD COLUMN worker_pid INTEGER')
   except Exception: pass
   try: c.execute('ALTER TABLE confirmation_receipts ADD COLUMN reply_message_id TEXT')
@@ -70,15 +85,25 @@ def init(db):
   except Exception: pass
   try: c.execute('ALTER TABLE confirmation_receipts ADD COLUMN reply_attempts INTEGER NOT NULL DEFAULT 0')
   except Exception: pass
-  # Quarantine receipts left by an older worker after the bounded retry
-  # policy was introduced. This migration is idempotent and keeps a stale
-  # failure from being re-enqueued on every service scan.
+  # Receipts created by the old bounded policy could be left permanently
+  # blocked after three transient failures. Requeue them once; the durable
+  # source/confirmation binding remains authoritative.
   c.execute("""UPDATE confirmation_receipts
-    SET status='blocked',
-        error=COALESCE(error,'超过自动上传重试上限'),
+    SET status='pending_dispatch',
+        error=COALESCE(error,'旧版上传重试已恢复'),
+        error_detail=COALESCE(error_detail,'旧版三次上限策略遗留，已自动恢复重试'),
         next_at=?
-    WHERE status IN ('pending','pending_dispatch') AND attempts>=?""",
-    (time.time() + 86400, MAX_DISPATCH_ATTEMPTS))
+    WHERE status='blocked' AND source IS NOT NULL AND token IS NOT NULL""",
+    (time.time(),))
+  # A pre-upgrade process may have left a non-blocked receipt at the old
+  # limit. Mark it as migrated so this repair runs only once per row.
+  c.execute("""UPDATE confirmation_receipts
+    SET status='pending_dispatch',
+        error_detail='旧版三次上限策略遗留，已自动恢复重试',
+        next_at=?
+    WHERE status IN ('pending','pending_dispatch') AND attempts>=?
+      AND (error_detail IS NULL OR error_detail='')""",
+    (time.time(), MAX_DISPATCH_ATTEMPTS))
   # Active cards may have been created by the pre-V1.4 formatter. Normalize
   # only pending/confirmed cards so a retry cannot resend the old missing-text
   # shape; completed/superseded history remains unchanged for auditability.
@@ -170,13 +195,13 @@ def record_failed_confirmation(db,text,sender,group,callback,error):
     WHERE sender=? AND grp=? AND state='confirmed' AND expires>?
     ORDER BY rowid DESC LIMIT 1""",(sender,group,now)).fetchone()
   c.execute("""INSERT INTO confirmation_receipts
-    (message_id,sender,grp,text,source,token,status,error,attempts,next_at,created)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?)
+    (message_id,sender,grp,text,source,token,status,error,error_detail,attempts,next_at,created)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(message_id) DO UPDATE SET status=CASE WHEN confirmation_receipts.status IN ('dispatched','blocked','reply_pending','reply_blocked')
       THEN confirmation_receipts.status ELSE 'pending_dispatch' END,
       error=excluded.error,next_at=excluded.next_at""",
    (callback,sender,group,text,card['source'] if card else None,
-    card['token'] if card else None,'pending' if card else 'unmatched',str(error)[:240],0,now+30,now))
+    card['token'] if card else None,'pending' if card else 'unmatched',str(error)[:240],str(error),0,now+30,now))
 
 def pending_confirmations(db,now=None):
  init(db); now=time.time() if now is None else now
@@ -227,7 +252,7 @@ def mark_confirmation_dispatch_failed(db,message_id,error):
  """Return a failed worker handoff to the short retry queue."""
  init(db); now=time.time()
  with q.conn(db) as c:
-  row=c.execute("SELECT source,status FROM confirmation_receipts WHERE message_id=?",
+  row=c.execute("SELECT source,status,attempts FROM confirmation_receipts WHERE message_id=?",
                 (message_id,)).fetchone()
   # A deterministic worker can commit and verify GitHub successfully, then
   # fail only while sending the Feishu receipt. Keep that upload authoritative
@@ -240,27 +265,29 @@ def mark_confirmation_dispatch_failed(db,message_id,error):
      (str(error)[:240], now + 30, message_id))
    return
   # Claim increments attempts before the worker starts. Do not increment
-  # again on error/exit; a late duplicate failure must be idempotent.
+  # again on error/exit; a late duplicate failure must be idempotent. A
+  # failed upload stays retryable forever with bounded exponential backoff;
+  # only a verified receipt can finish the batch.
+  attempts = int(row['attempts'] or 0) if row else 0
+  delay = _dispatch_retry_delay(attempts) if attempts else DISPATCH_RETRY_BASE_SECONDS
   c.execute("""UPDATE confirmation_receipts
-    SET status=CASE WHEN attempts>=? THEN 'blocked' ELSE 'pending_dispatch' END,
-        error=?,next_at=CASE WHEN attempts>=? THEN ? ELSE ? END,worker_pid=NULL
+    SET status='pending_dispatch', error=?, error_detail=?, next_at=?, worker_pid=NULL
     WHERE message_id=? AND status='dispatching'""",
-    (MAX_DISPATCH_ATTEMPTS, str(error)[:240], MAX_DISPATCH_ATTEMPTS,
-     now + 86400, now + 30, message_id))
+    (str(error)[:240], str(error), now + delay, message_id))
   # Preserve a pre-claim failure for diagnosis without inventing a worker
   # attempt or consuming the three-attempt upload budget.
   if row and row['status'] in ('pending','pending_dispatch'):
-   c.execute("UPDATE confirmation_receipts SET error=? WHERE message_id=? AND status IN ('pending','pending_dispatch')",
-             (str(error)[:240],message_id))
+   c.execute("UPDATE confirmation_receipts SET error=?,error_detail=? WHERE message_id=? AND status IN ('pending','pending_dispatch')",
+             (str(error)[:240],str(error),message_id))
 
 def mark_confirmation_blocked(db,message_id,error):
- """Stop automatic upload when deterministic preflight finds missing data."""
+ """Keep a preflight failure retryable while retaining its full diagnosis."""
  init(db); now=time.time()
  with q.conn(db) as c:
   c.execute("""UPDATE confirmation_receipts
-    SET status='blocked',error=?,next_at=?,worker_pid=NULL
+    SET status='pending_dispatch',error=?,error_detail=?,next_at=?,worker_pid=NULL
     WHERE message_id=? AND status IN ('pending','pending_dispatch','dispatching')""",
-    (str(error)[:240],now+86400,message_id))
+    (str(error)[:240],str(error),now+DISPATCH_RETRY_BASE_SECONDS,message_id))
 
 def requeue_blocked_confirmation(db, message_id):
  """Requeue one known false-positive duplicate guard failure.
@@ -370,7 +397,7 @@ def mark_confirmation_dispatched(db,message_id,reply_message_id=None):
    raise ValueError('确认回执没有绑定原始报数')
   verify_dispatch_receipt(db,row['source'],message_id)
   c.execute("""UPDATE confirmation_receipts
-    SET status='dispatched',error=NULL,worker_pid=NULL,
+    SET status='dispatched',error=NULL,error_detail=NULL,worker_pid=NULL,
         reply_message_id=COALESCE(?,reply_message_id),dispatched_at=?,
         dispatch_duration_ms=CASE WHEN dispatch_started_at IS NOT NULL
           THEN (? - dispatch_started_at) * 1000
