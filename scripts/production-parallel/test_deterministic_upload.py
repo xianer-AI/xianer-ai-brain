@@ -285,5 +285,46 @@ class DeterministicCandidateTests(unittest.TestCase):
         self.assertIn('生产日期按员工补报中明确填写的日期入账', candidate)
 
 
+class ProductionStatusRegressionTests(unittest.TestCase):
+    def test_numbered_update_log_keeps_status_provenance(self):
+        text = (
+            '## 十一、更新记录\n\n'
+            '| 日期 | 更新内容 | 影响范围 | GitHub提交 |\n'
+            '|---|---|---|---|\n'
+            '| 2026-10-03 | 旧记录 | 状态 | abc123 |\n'
+        )
+        report = {
+            'worker': 'B', 'name': '梅芳', 'process': '下机',
+            'production_date': '2026-10-02', 'status_only': True,
+            'not_worked': True, 'already_reported': False,
+            'values': {product: 0 for product in uploader.PRODUCTS},
+        }
+        result = uploader._update_log(
+            text, report, 'om_status_source', 'om_status_confirmation'
+        )
+        self.assertIn('来源消息：om_status_source', result)
+        self.assertIn('确认消息：om_status_confirmation', result)
+
+    def test_remote_status_reconciliation_requires_exact_bound_row(self):
+        report = {
+            'worker': 'B', 'name': '梅芳', 'process': '下机',
+            'production_date': '2026-10-02', 'status_only': True,
+            'not_worked': True, 'already_reported': False,
+        }
+        good = (
+            '| 2026-10-02 | 确认状态 B | 梅芳（B）下机：当天未上班；'
+            '来源消息：om_status_source；确认消息：om_status_confirmation |\n'
+        )
+        bad = (
+            '| 2026-10-01 | 确认状态 B | 梅芳（B）下机：当天未上班；'
+            '来源消息：om_status_source；确认消息：om_status_confirmation |\n'
+        )
+        self.assertTrue(uploader._remote_contains_exact_task(
+            good, report, 'om_status_source', 'om_status_confirmation'
+        ))
+        self.assertFalse(uploader._remote_contains_exact_task(
+            bad, report, 'om_status_source', 'om_status_confirmation'
+        ))
+
 if __name__ == '__main__':
     unittest.main()

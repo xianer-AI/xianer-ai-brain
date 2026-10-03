@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from pathlib import Path
 
 import commit_guard
@@ -904,10 +905,9 @@ def _update_daily(text, worker, report):
 
 
 def _update_log(text, report, source, confirmation):
-    # The live ledger keeps the audit heading numbered (for example
-    # ``## 十一、更新记录``).  Match both the legacy unnumbered heading and
-    # the numbered form; otherwise status-only confirmations (choices 1/2)
-    # lose their source/confirmation IDs before commit_guard runs.
+    # Historical ledgers may number this section, for example 十一、更新记录,
+    # while newer templates may use a bare 更新记录 heading. Treat both as
+    # the same audit section so provenance is never lost because of numbering.
     marker_match = re.search(r'^#{2,3} (?:[一二三四五六七八九十百]+、)?更新记录\s*$', text, re.M)
     if not marker_match:
         return text
@@ -997,6 +997,65 @@ def build_candidate(before, report, source, confirmation):
     return after
 
 
+def _remote_contains_exact_task(text, report, source, confirmation):
+    """Return whether the already-written remote ledger matches this task."""
+    if source not in text or confirmation not in text:
+        return False
+    if report.get('status_only') or report.get('not_worked') or report.get('already_reported'):
+        expected_state = '当天未上班' if report.get('not_worked') else '已经报过'
+        production_date = str(report.get('production_date') or '')
+        name = str(report.get('name') or '')
+        for line in text.splitlines():
+            if source in line and confirmation in line:
+                return production_date in line and name in line and expected_state in line
+        return False
+    return True
+
+
+def _latest_ledger_commit(endpoint):
+    """Return the latest commit touching the exact ledger path."""
+    if '/contents/' not in endpoint:
+        raise RuntimeError('无法从台账 endpoint 推导仓库路径')
+    ledger_path = endpoint.split('/contents/', 1)[1]
+    encoded = urllib.parse.quote(ledger_path, safe='')
+    commits = commit_guard.gh_read_json(
+        f'repos/xianer-AI/xianer-ai-brain/commits?path={encoded}&per_page=1'
+    )
+    if not isinstance(commits, list) or not commits or not commits[0].get('sha'):
+        raise RuntimeError('无法取得远程台账最近提交')
+    return commits[0]['sha']
+
+
+def _recover_verified_remote(receipt_path, endpoint, remote_text, report, source, confirmation):
+    """Rebuild a verified local receipt when GitHub is already correct."""
+    if not _remote_contains_exact_task(remote_text, report, source, confirmation):
+        raise ValueError('远程仅部分包含当前任务标识，不能自动认定同步成功')
+    commit = _latest_ledger_commit(endpoint)
+    note = (
+        f'远程对账恢复成功：GitHub 当前台账已包含来源 {source}、确认 {confirmation}，'
+        f'并与 {report.get("name")} {report.get("production_date")} 的当前任务一致'
+    )
+    receipt = {
+        'source': source,
+        'confirmation': confirmation,
+        'commit': commit,
+        'note': note,
+        'status': 'verified',
+        'guard': 'remote reconciliation after missing local receipt',
+        'endpoint': endpoint,
+        'backfill': bool(report.get('backfill')),
+        'report': report,
+    }
+    try:
+        receipt['message'] = commit_guard.format_success_receipt(
+            report, source, confirmation, commit, note
+        )
+    except Exception:
+        receipt['message'] = None
+    receipt_path.parent.mkdir(exist_ok=True)
+    receipt_path.write_text(json.dumps(receipt, ensure_ascii=False), encoding='utf-8')
+    return receipt
+
 def run(task_path):
     inspected, report = _standard_report(task_path)
     source, confirmation = inspected['source'], inspected['confirmation']
@@ -1012,7 +1071,13 @@ def run(task_path):
             pass
     expected_sha, before = _remote(endpoint)
     if source in before or confirmation in before:
-        raise ValueError('来源或确认消息已在远程台账中，但本地没有已验证回执，停止自动重复写入')
+        if source in before and confirmation in before:
+            receipt = _recover_verified_remote(
+                receipt_path, endpoint, before, report, source, confirmation
+            )
+            print(json.dumps(receipt, ensure_ascii=False))
+            return receipt
+        raise ValueError('远程只找到来源或确认其中一个标识，停止自动写入并等待人工核对')
     candidate = build_candidate(before, report, source, confirmation)
     commit_guard.run_original_ledger_guard(before, candidate)
     with tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix='.md', delete=False) as handle:

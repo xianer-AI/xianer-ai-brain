@@ -310,6 +310,13 @@ def render(
                      if status == 'not_worked')
         for code in WORKERS
     }
+    # A confirmed attendance result supersedes any stale pending-queue row for
+    # the same worker/date. This keeps the coverage view from showing a date as
+    # both confirmed and still waiting for a reply after upload/recovery.
+    for code in WORKERS:
+        for value in list(pending_by_worker[code]):
+            if value in normalized_status[code]:
+                pending_by_worker[code].pop(value, None)
     # A confirmed non-working day is an attendance result, not a production
     # date. Keep it out of every production count and missing-date check.
     for code in WORKERS:

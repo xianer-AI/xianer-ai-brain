@@ -153,5 +153,18 @@ class CoverageTableTests(unittest.TestCase):
         self.assertNotIn("✓ 10月1日", text)
 
 
+    def test_confirmed_status_suppresses_stale_pending_queue(self):
+        text = coverage_tables.render(
+            {'B': {'2026-10-01'}},
+            [(2026, 10)],
+            attendance_status_map={'B': {'2026-10-02': 'not_worked'}},
+            pending_queue=[
+                {'worker': 'B', 'production_date': '2026-10-02', 'state': 'sent'},
+            ],
+        )
+        self.assertIn('已确认未上班：10月2日', text)
+        self.assertNotIn('10月2日（核实卡已发送，等待回复）', text)
+        self.assertNotIn('| B｜梅芳 | 2026年10月2日 | 核实卡已发送，等待回复 |', text)
+
 if __name__ == "__main__":
     unittest.main()
