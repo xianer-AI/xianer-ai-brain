@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from pathlib import Path
 
 import commit_guard
@@ -904,10 +905,227 @@ def _update_daily(text, worker, report):
 
 
 def _update_log(text, report, source, confirmation):
-    marker = '## 更新记录'
-    start = text.find(marker)
-    if start < 0:
+    # Historical ledgers may number this section, for example 十一、更新记录,
+    # while newer templates may use a bare 更新记录 heading. Treat both as
+    # the same audit section so provenance is never lost because of numbering.
+    marker_match = re.search(r'^## (?:[^\\n]*、)?更新记录\\s*    header = text.find('| 日期 | 更新内容 | 结果 |', start)
+    modern_header = False
+    if header < 0:
+        header = text.find('| 日期 | 更新内容 | 影响范围 | GitHub提交 |', start)
+        modern_header = header >= 0
+    if header < 0:
         return text
+    separator = text.find('\n', header) + 1
+    separator = text.find('\n', separator) + 1
+    values = report['values']
+    if report.get('status_only') or report.get('not_worked') or report.get('already_reported'):
+        status_label = '当天未上班' if report.get('not_worked') else '已经报过'
+        if modern_header:
+            row = (f'| {report["production_date"]} | 确认状态 {report["worker"]} | '
+                   f'{report["name"]}（{report["worker"]}）{report["process"]}：{status_label}，不计入生产统计；'
+                   f'来源消息：{source}；确认消息：{confirmation}；保留出勤核实状态，未写入生产明细或累计 | 待同步 |\n')
+        else:
+            row = (f'| {report["production_date"]} | 确认状态 {report["worker"]} | '
+                   f'{report["name"]}（{report["worker"]}）{report["process"]}：{status_label}，不计入生产统计；'
+                   f'来源消息：{source}；确认消息：{confirmation}；保留出勤核实状态，未写入生产明细或累计 |\n')
+        return text[:separator] + row + text[separator:]
+    detail = '、'.join(f'{p}{values[p]}' for p in PRODUCTS)
+    missing = set(report.get('missing_products') or ())
+    missing_note = ('；原始未报项：' + '、'.join(p for p in PRODUCTS if p in missing) +
+                    '，经本人“准确”确认按0双入账') if missing else ''
+    year_month = f'{report["year"]}年{report["month"]}月'
+    action = '补报并上传' if report.get('backfill') else '上传'
+    row = (f'| {report["production_date"]} | {action} {report["worker"]} 当日已确认报数 | '
+           f'{report["name"]}（{report["worker"]}）{report["process"]}：{detail}双，合计{sum(values.values())}双{missing_note}；'
+           f'来源消息：{source}；确认消息：{confirmation}；同步更新{year_month}月度、当日日报及对应年度累计 |\n')
+    return text[:separator] + row + text[separator:]
+
+
+def build_candidate(before, report, source, confirmation):
+    worker = report['worker']
+    missing_products = set(report.get('missing_products') or ())
+    latest = report['production_date']
+    if 'year' not in report or 'month' not in report:
+        _, report_year, report_month, _ = _date_parts(latest)
+        report = dict(report, year=report_year, month=report_month)
+    period = latest[:7]
+    if report.get('status_only') or report.get('not_worked') or report.get('already_reported'):
+        after = _insert_attendance_status(before, worker, report, source, confirmation)
+        try:
+            all_totals, all_dates = _records(after, worker)
+        except RuntimeError:
+            all_totals, all_dates = ({product: 0 for product in PRODUCTS}, set())
+        month_totals, month_dates = _records(after, worker, period) if all_dates else ({product: 0 for product in PRODUCTS}, set())
+        month_latest = max(month_dates) if month_dates else None
+        after = _ensure_month_section(after, report['year'], report['month'])
+        if all_dates:
+            month_latest = max(month_dates) if month_dates else None
+            all_latest = max(all_dates)
+            if month_latest:
+                after = _update_personal(after, worker, month_totals, month_latest, missing_products)
+            after = _update_annual(after, worker, all_totals, missing_products, all_latest)
+            after = _update_group_table(after, worker, all_totals, all_latest, missing_products)
+        # Preserve a row for a status-only date in the month summary.  The
+        # row contains dashes/0 days and does not contribute to production.
+        after = _update_monthly(after, worker, month_totals, month_dates, month_latest or latest)
+        after = _update_coverage(after, worker, all_dates, max(all_dates) if all_dates else latest)
+        after = _update_log(after, report, source, confirmation)
+        if before.endswith('\n') and not after.endswith('\n'):
+            after += '\n'
+        return after
+    after = _insert_detail(before, worker, report, source, confirmation)
+    all_totals, all_dates = _records(after, worker)
+    month_totals, month_dates = _records(after, worker, period)
+    month_latest = max(month_dates)
+    all_latest = max(all_dates)
+    # Month and personal projections must never absorb prior months.  The
+    # annual/half-year projections intentionally use all valid detail rows.
+    after = _ensure_month_section(after, report['year'], report['month'])
+    after = _update_personal(after, worker, month_totals, month_latest, missing_products)
+    after = _update_annual(after, worker, all_totals, missing_products, all_latest)
+    after = _update_group_table(after, worker, all_totals, all_latest, missing_products)
+    after = _update_monthly(after, worker, month_totals, month_dates, month_latest)
+    after = _update_coverage(after, worker, all_dates, all_latest)
+    after = _update_daily(after, worker, report)
+    after = _update_log(after, report, source, confirmation)
+    if before.endswith('\n') and not after.endswith('\n'):
+        after += '\n'
+    return after
+
+
+def _remote_contains_exact_task(text, report, source, confirmation):
+    """Return whether the already-written remote ledger matches this task."""
+    if source not in text or confirmation not in text:
+        return False
+    if report.get('status_only') or report.get('not_worked') or report.get('already_reported'):
+        expected_state = '当天未上班' if report.get('not_worked') else '已经报过'
+        production_date = str(report.get('production_date') or '')
+        name = str(report.get('name') or '')
+        for line in text.splitlines():
+            if source in line and confirmation in line:
+                return production_date in line and name in line and expected_state in line
+        return False
+    return True
+
+
+def _latest_ledger_commit(endpoint):
+    """Return the latest commit touching the exact ledger path."""
+    if '/contents/' not in endpoint:
+        raise RuntimeError('无法从台账 endpoint 推导仓库路径')
+    ledger_path = endpoint.split('/contents/', 1)[1]
+    encoded = urllib.parse.quote(ledger_path, safe='')
+    commits = commit_guard.gh_read_json(
+        f'repos/xianer-AI/xianer-ai-brain/commits?path={encoded}&per_page=1'
+    )
+    if not isinstance(commits, list) or not commits or not commits[0].get('sha'):
+        raise RuntimeError('无法取得远程台账最近提交')
+    return commits[0]['sha']
+
+
+def _recover_verified_remote(receipt_path, endpoint, remote_text, report, source, confirmation):
+    """Rebuild a verified local receipt when GitHub is already correct."""
+    if not _remote_contains_exact_task(remote_text, report, source, confirmation):
+        raise ValueError('远程仅部分包含当前任务标识，不能自动认定同步成功')
+    commit = _latest_ledger_commit(endpoint)
+    note = (
+        f'远程对账恢复成功：GitHub 当前台账已包含来源 {source}、确认 {confirmation}，'
+        f'并与 {report.get("name")} {report.get("production_date")} 的当前任务一致'
+    )
+    receipt = {
+        'source': source,
+        'confirmation': confirmation,
+        'commit': commit,
+        'note': note,
+        'status': 'verified',
+        'guard': 'remote reconciliation after missing local receipt',
+        'endpoint': endpoint,
+        'backfill': bool(report.get('backfill')),
+        'report': report,
+    }
+    try:
+        receipt['message'] = commit_guard.format_success_receipt(
+            report, source, confirmation, commit, note
+        )
+    except Exception:
+        receipt['message'] = None
+    receipt_path.parent.mkdir(exist_ok=True)
+    receipt_path.write_text(json.dumps(receipt, ensure_ascii=False), encoding='utf-8')
+    return receipt
+
+def run(task_path):
+    inspected, report = _standard_report(task_path)
+    source, confirmation = inspected['source'], inspected['confirmation']
+    endpoint = commit_guard.endpoint_for_date(report['production_date'])
+    receipt_path = Path(DB).parent / 'receipts' / (hashlib.sha256(source.encode()).hexdigest() + '.json')
+    if receipt_path.exists():
+        try:
+            receipt = json.loads(receipt_path.read_text())
+            if receipt.get('status') == 'verified' and receipt.get('source') == source and receipt.get('confirmation') == confirmation:
+                print(json.dumps(receipt, ensure_ascii=False))
+                return receipt
+        except (OSError, ValueError):
+            pass
+    expected_sha, before = _remote(endpoint)
+    if source in before or confirmation in before:
+        if source in before and confirmation in before:
+            receipt = _recover_verified_remote(
+                receipt_path, endpoint, before, report, source, confirmation
+            )
+            print(json.dumps(receipt, ensure_ascii=False))
+            return receipt
+        raise ValueError('远程只找到来源或确认其中一个标识，停止自动写入并等待人工核对')
+    candidate = build_candidate(before, report, source, confirmation)
+    commit_guard.run_original_ledger_guard(before, candidate)
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix='.md', delete=False) as handle:
+        handle.write(candidate)
+        candidate_path = handle.name
+    try:
+        missing = set(report.get('missing_products') or ())
+        missing_note = ('原始未报项 ' + '、'.join(p for p in PRODUCTS if p in missing) +
+                        ' 经本次准确确认按0双入账；') if missing else ''
+        note = (f'任务内原报数与员工本人准确确认由 inspect 核验并绑定同一核对卡；'
+                f'{report["worker"]}={report["name"]}，{report["production_date"]} {report["process"]}，'
+                f'六项按确认结果写入；{missing_note}明确报0项目按本次准确确认写入0双；候选从远程最新全文生成，'
+                f'保留旧记录，并经原有 guard 校验通过。')
+        environment = dict(os.environ)
+        environment['PRODUCTION_LEDGER_ENDPOINT'] = endpoint
+        proc = subprocess.run([sys.executable, str(Path(upload_task.__file__).resolve()), 'commit',
+                               '--task', str(inspected['task']), '--expected-sha', expected_sha,
+                               '--file', candidate_path, '--review-note', note],
+                              text=True, capture_output=True, env=environment)
+        if proc.returncode:
+            raise RuntimeError((proc.stderr or proc.stdout or '确定性上传失败').strip()[-1200:])
+        receipt = json.loads((proc.stdout or '').strip().splitlines()[-1])
+        print(json.dumps(receipt, ensure_ascii=False))
+        return receipt
+    finally:
+        Path(candidate_path).unlink(missing_ok=True)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--task', required=True)
+    parser.add_argument('--lease-key')
+    args = parser.parse_args()
+    try:
+        run(args.task)
+    except RuntimeError as exc:
+        if str(exc) in {'非标准员工代号', '非标准生产日期', '存在非标准产品', '数量不是整数', '数量不能为负数', '六项产品未完整解析', '合计与六项数量不一致'}:
+            print('确定性路径不适用：' + str(exc), file=sys.stderr)
+            raise SystemExit(UNSUPPORTED)
+        print('确定性上传失败：' + str(exc), file=sys.stderr)
+        raise SystemExit(1)
+    except (ValueError, OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+        print('确定性上传失败：' + str(exc), file=sys.stderr)
+        raise SystemExit(1)
+
+
+if __name__ == '__main__':
+    main()
+, text, re.M)
+    if not marker_match:
+        return text
+    start = marker_match.start()
     header = text.find('| 日期 | 更新内容 | 结果 |', start)
     modern_header = False
     if header < 0:
