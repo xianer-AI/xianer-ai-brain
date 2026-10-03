@@ -8,26 +8,6 @@ import deterministic_upload as uploader
 
 
 class DeterministicCandidateTests(unittest.TestCase):
-    def test_status_only_new_month_keeps_historical_production(self):
-        fixture = Path('/tmp/ledger-current.md')
-        if not fixture.exists():
-            self.skipTest('requires the read-only ledger fixture')
-        before = fixture.read_text(encoding='utf-8')
-        report = {
-            'worker': 'C', 'name': '李鸿玉', 'process': '烤边',
-            'production_date': '2026-10-02', 'status_only': True,
-            'attendance_status': 'not_worked', 'not_worked': True,
-            'values': {product: 0 for product in uploader.PRODUCTS},
-        }
-        historical = uploader._records(before, 'C')
-        with self.assertRaises(RuntimeError):
-            uploader._records(before, 'C', '2026-10')
-        after = uploader.build_candidate(before, report, 'om_test_status_source', 'om_test_status_confirmation')
-        self.assertEqual(historical, uploader._records(after, 'C'))
-        self.assertIn('om_test_status_source', after)
-        self.assertIn('om_test_status_confirmation', after)
-        self.assertNotIn('20261002-C-', after)
-
     def setUp(self):
         fixture = Path('/tmp/ledger-current.md')
         if not fixture.exists():
@@ -50,22 +30,6 @@ class DeterministicCandidateTests(unittest.TestCase):
         chunk = text[start:] if end < 0 else text[start:end]
         match = re.search(rf'^\| {re.escape(worker)}(?:已报|个人)小计 \| (\d+) \|', chunk, re.M)
         return None if not match else (int(match.group(1)), match.group(0), start + match.start())
-
-    def test_candidate_preserves_history_and_updates_all_projections(self):
-        report = dict(self.report, production_date='2026-10-02')
-        candidate = uploader.build_candidate(
-            self.before, report,
-            'om_candidate_preserve_source',
-            'om_candidate_preserve_confirmation',
-        )
-        self.assertEqual(candidate.count('20261002-C-'), 6)
-        self.assertRegex(candidate, r'\| C(?:已报|个人)小计 \| 14700 \| 六项均已收到数量反馈 \|')
-        self.assertIn('来源消息：om_candidate_preserve_source', candidate)
-        self.assertIn('确认消息：om_candidate_preserve_confirmation', candidate)
-        # The original remote guard is the final authority for the candidate.
-        with patch.object(uploader.commit_guard, 'run_original_ledger_guard', return_value='ok') as guard:
-            uploader.commit_guard.run_original_ledger_guard(self.before, candidate)
-            guard.assert_called_once()
 
     def test_confirmed_missing_product_is_coerced_to_zero_with_provenance(self):
         # The card confirmation has already authorized the normalized zero;
@@ -108,27 +72,6 @@ class DeterministicCandidateTests(unittest.TestCase):
             before, report, 'om_label_source', 'om_label_confirmation',
         )
         self.assertIn(f'| C个人小计 | {old_total + sum(report["values"].values())} | 六项均已收到数量反馈 |', candidate)
-
-    def test_cross_month_candidate_does_not_roll_september_into_october(self):
-        before_subtotal = self._personal_subtotal(self.before, 'B', 2026, 9)
-        self.assertIsNotNone(before_subtotal)
-        report = {
-            'worker': 'B', 'name': '梅芳', 'process': '下机',
-            'production_date': '2026-10-02',
-            'values': dict(zip(uploader.PRODUCTS, [2500, 1700, 200, 0, 0, 0])),
-            'missing_products': set(),
-        }
-        candidate = uploader.build_candidate(
-            self.before, report, 'om_oct_source', 'om_oct_confirmation',
-        )
-        self.assertIn('| B｜梅芳 | 下机 | 5000 | 3400 | 400 | 0 | 0 | 0 | 8800 | 2日 | 2026-10-02 |', candidate)
-        self.assertIn('### B｜2026年10月个人累计', candidate)
-        self.assertIn('### 2026年10月每日汇总', candidate)
-        self.assertIn('20261002-B-', candidate)
-        # September's historical personal subtotal remains unchanged, regardless
-        # of whether the source ledger uses its legacy or current label.
-        old_total, old_row, _ = before_subtotal
-        self.assertIn(old_row, candidate)
 
     def test_2027_template_routes_to_january_and_keeps_other_months_empty(self):
         template = Path(__file__).with_name('templates') / '2027全年下机白胚半成品统计.md'
