@@ -219,9 +219,11 @@ def scan(db, limit=200):
     _ensure_table(db)
     created = []
     with q.conn(db) as c:
+        # Apply the limit after filtering, otherwise processed older rows can
+        # permanently starve newer reports once the ready backlog exceeds it.
         rows = c.execute("""SELECT * FROM inbox
-          WHERE grp=? AND status='ready' ORDER BY created,id LIMIT ?""",
-                         (GROUP, int(limit))).fetchall()
+          WHERE grp=? AND status='ready' ORDER BY created,id""",
+                         (GROUP,)).fetchall()
         for row in rows:
             if c.execute('SELECT 1 FROM recovery_suppressions WHERE source=?', (row['id'],)).fetchone():
                 continue

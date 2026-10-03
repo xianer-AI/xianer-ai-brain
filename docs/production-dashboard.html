@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>生产统计实时看板</title>
+<style>body{font:18px system-ui;background:#0d1117;color:#e6edf3;margin:32px}table{border-collapse:collapse;margin:16px 0}th,td{border:1px solid #30363d;padding:10px 14px}th{background:#161b22}.ok{color:#3fb950}#updated{color:#8b949e}</style>
+<h1>生产统计实时看板</h1><div id="updated">正在读取…</div><div id="app"></div>
+<script>
+const api='https://api.github.com/repos/xianer-AI/xianer-ai-brain/contents/%E8%A2%9C%E5%AD%90%E7%94%9F%E4%BA%A7%E5%88%B6%E9%80%A0%E8%A2%9C%E5%AD%90%E5%8E%82/%E5%BA%93%E5%AD%98%E8%AE%B0%E5%8F%B0/2026%E4%B8%8B%E5%8D%8A%E5%B9%B4%E4%B8%8B%E6%9C%BA%E7%99%BD%E8%83%9A%E5%8D%8A%E6%88%90%E5%93%81%E7%BB%9F%E8%AE%A1.md';
+async function refresh(){try{let r=await fetch(api+'?t='+Date.now(),{cache:'no-store'}),j=await r.json(),md=atob(j.content.replace(/\n/g,''));let s=md.indexOf('### 待核实日期'),e=md.indexOf('### 已确认出勤状态日期');let block=md.slice(s,e);document.querySelector('#app').innerHTML='<pre>'+block.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</pre>';document.querySelector('#updated').textContent='已同步：'+new Date().toLocaleString()+'（每 10 秒自动刷新）'}catch(e){document.querySelector('#updated').textContent='读取失败：'+e}}
+refresh();setInterval(refresh,10000);
+</script>
