@@ -23,7 +23,7 @@ import coverage_tables
 import alert_schedule
 
 GROUP = 'oc_1f8587b1bcde12a0d1bb6053ab2b748a'
-BACKFILL_CARD_VERSION = 'V1.15-CARD-6'
+BACKFILL_CARD_VERSION = 'V1.17-CARD-6'
 DEFAULT_DB = str(Path.home() / '.openclaw/state/production-parallel/inbox.sqlite')
 STATUS_SNAPSHOT_NAME = 'pending_status.json'
 

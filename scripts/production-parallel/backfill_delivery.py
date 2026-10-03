@@ -46,7 +46,7 @@ def deliver(db: str | Path, worker: str, production_date: str, send=None) -> dic
     """Send once and retain the Feishu receipt for duplicate suppression."""
     _init(db)
     day = dt.date.fromisoformat(production_date).isoformat()
-    key = f"{worker}:{day}:V1.15"
+    key = f"{worker}:{day}:V1.17"
     with sqlite3.connect(db) as conn:
         conn.row_factory = sqlite3.Row
         old = conn.execute(

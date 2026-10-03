@@ -166,5 +166,19 @@ class CoverageTableTests(unittest.TestCase):
         self.assertNotIn('10月2日（核实卡已发送，等待回复）', text)
         self.assertNotIn('| B｜梅芳 | 2026年10月2日 | 核实卡已发送，等待回复 |', text)
 
+    def test_confirmed_status_is_not_reintroduced_as_missing(self):
+        text = coverage_tables.render(
+            {'B': {'2026-09-20', '2026-10-03'},
+             'C': {'2026-09-20', '2026-10-03'}},
+            [(2026, 9), (2026, 10)],
+            attendance_status_map={
+                'B': {'2026-10-02': 'not_worked'},
+                'C': {'2026-10-01': 'not_worked', '2026-10-02': 'not_worked'},
+            },
+        )
+        self.assertNotIn('B｜梅芳 | 2026年10月2日 | 尚无有效记录（待核实）', text)
+        self.assertNotIn('C｜李鸿玉 | 2026年10月1日 | 尚无有效记录（待核实）', text)
+        self.assertNotIn('C｜李鸿玉 | 2026年10月2日 | 尚无有效记录（待核实）', text)
+
 if __name__ == "__main__":
     unittest.main()

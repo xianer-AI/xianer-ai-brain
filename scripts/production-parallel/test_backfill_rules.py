@@ -32,7 +32,7 @@ class BackfillRuleTests(unittest.TestCase):
                 backfill_flow.init(db)
                 conn.execute(
                     "INSERT INTO requests(request_key,worker,production_date,group_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
-                    ("B:2026-09-20:V1.15", "B", "2026-09-20", backfill_flow.GROUP,
+                    ("B:2026-09-20:V1.17", "B", "2026-09-20", backfill_flow.GROUP,
                      "verification_sent", 1, 1),
                 )
             self.assertIsNone(backfill_flow.handle_choice("missing", "sender", "4", db=db))
@@ -47,7 +47,7 @@ class BackfillRuleTests(unittest.TestCase):
                 with sqlite3.connect(db) as conn:
                     conn.execute(
                         "INSERT INTO requests(request_key,worker,production_date,group_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
-                        ("B:2026-09-20:V1.15", "B", "2026-09-20", backfill_flow.GROUP,
+                        ("B:2026-09-20:V1.17", "B", "2026-09-20", backfill_flow.GROUP,
                          "verification_sent", 1, 1),
                     )
                 if number == "3":
@@ -67,7 +67,7 @@ class BackfillRuleTests(unittest.TestCase):
             with sqlite3.connect(db) as conn:
                 conn.execute(
                     "INSERT INTO requests(request_key,worker,production_date,group_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
-                    ("B:2026-09-20:V1.15", "B", "2026-09-20", backfill_flow.GROUP,
+                    ("B:2026-09-20:V1.17", "B", "2026-09-20", backfill_flow.GROUP,
                      "verification_sent", 1, 1),
                 )
             with patch.object(backfill_flow, "_send", return_value="om_template") as send:
@@ -101,7 +101,7 @@ class BackfillRuleTests(unittest.TestCase):
                 with sqlite3.connect(request_db) as conn:
                     conn.execute(
                         "INSERT INTO requests(request_key,worker,production_date,group_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
-                        ("B:2026-09-20:V1.15", "B", "2026-09-20", backfill_flow.GROUP,
+                        ("B:2026-09-20:V1.17", "B", "2026-09-20", backfill_flow.GROUP,
                          "template_sent", 1, 1),
                     )
                 import queue_store, review_cards, worker_identity
@@ -146,7 +146,7 @@ class BackfillRuleTests(unittest.TestCase):
             with sqlite3.connect(request_db) as conn:
                 conn.execute(
                     "INSERT INTO requests(request_key,worker,production_date,group_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
-                    ("B:2026-09-20:V1.15", "B", "2026-09-20", backfill_flow.GROUP,
+                    ("B:2026-09-20:V1.17", "B", "2026-09-20", backfill_flow.GROUP,
                      "verification_sent", 1, 1),
                 )
             import queue_store
@@ -196,7 +196,7 @@ class BackfillRuleTests(unittest.TestCase):
                 with sqlite3.connect(request_db) as conn:
                     conn.execute(
                         "INSERT INTO requests(request_key,worker,production_date,group_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
-                        ("B:2026-09-20:V1.15", "B", "2026-09-20", backfill_flow.GROUP,
+                        ("B:2026-09-20:V1.17", "B", "2026-09-20", backfill_flow.GROUP,
                          "verification_sent", 1, 1),
                     )
                 import queue_store, review_cards, worker_identity
@@ -226,7 +226,7 @@ class BackfillRuleTests(unittest.TestCase):
                                      ("2026-09-22", "queued_after_previous")):
                     conn.execute(
                         "INSERT INTO requests(request_key,worker,production_date,group_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
-                        (f"B:{day}:V1.15", "B", day, backfill_flow.GROUP, status, 1, 1),
+                        (f"B:{day}:V1.17", "B", day, backfill_flow.GROUP, status, 1, 1),
                     )
             with patch.object(backfill_flow, "_send", return_value="om_next"):
                 # The production auto queue is intentionally independent of

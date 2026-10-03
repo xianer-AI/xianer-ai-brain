@@ -330,6 +330,10 @@ def render(
     }
     for code in WORKERS:
         expected_map.setdefault(code, set())
+        # Confirmed attendance outcomes are closed dates. They must not be
+        # reintroduced as generic missing dates when the expected-date window
+        # is derived from the remaining production records.
+        expected_map[code].difference_update(normalized_status[code])
     # A queue row is a real operational state even though it is not a
     # production record. Include it in the pending display without changing
     # effective production dates or quantities.

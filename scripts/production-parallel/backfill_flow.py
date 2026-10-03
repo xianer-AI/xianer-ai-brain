@@ -29,7 +29,7 @@ WORKERS = {
     "D": ("张小翠", "烤边"),
 }
 PRODUCTS = ("棉堆堆袜", "冰冰袜", "小腿袜", "过膝袜", "女船袜", "男船袜")
-WORKBENCH_VERSION = "V1.15"
+WORKBENCH_VERSION = "V1.17"
 CHOICES = {"1": "当天未上班", "2": "已经报过", "3": "需要补报"}
 
 
@@ -286,7 +286,7 @@ def _parent_message(message_id: str) -> str | None:
         return item.get("parent_id") or item.get("root_id")
     except Exception:
         # A button fallback may arrive with a synthetic/non-message callback
-        # id.  The caller will use the newest active V1.15 request instead of
+        # id.  The caller will use the newest active V1.17 request instead of
         # handing the text to the generic chat model.
         return None
 
@@ -317,7 +317,7 @@ def _find_request(message_id: str, worker: str | None, day: str | None, db: str 
                                 (worker, _day(day))).fetchone()
         # Feishu clients do not all preserve the card callback payload.  Some
         # send only the visible button text (or a bare 1/2/3), with no parent
-        # message id.  Resolve that fallback to the single newest active V1.15
+        # message id.  Resolve that fallback to the single newest active V1.17
         # verification/template request rather than letting the generic model
         # answer the button as a normal chat message.
         return conn.execute(
