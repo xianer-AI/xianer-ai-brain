@@ -8,6 +8,26 @@ import deterministic_upload as uploader
 
 
 class DeterministicCandidateTests(unittest.TestCase):
+    def test_status_only_new_month_keeps_historical_production(self):
+        fixture = Path('/tmp/ledger-current.md')
+        if not fixture.exists():
+            self.skipTest('requires the read-only ledger fixture')
+        before = fixture.read_text(encoding='utf-8')
+        report = {
+            'worker': 'C', 'name': '李鸿玉', 'process': '烤边',
+            'production_date': '2026-10-02', 'status_only': True,
+            'attendance_status': 'not_worked', 'not_worked': True,
+            'values': {product: 0 for product in uploader.PRODUCTS},
+        }
+        historical = uploader._records(before, 'C')
+        with self.assertRaises(RuntimeError):
+            uploader._records(before, 'C', '2026-10')
+        after = uploader.build_candidate(before, report, 'om_test_status_source', 'om_test_status_confirmation')
+        self.assertEqual(historical, uploader._records(after, 'C'))
+        self.assertIn('om_test_status_source', after)
+        self.assertIn('om_test_status_confirmation', after)
+        self.assertNotIn('20261002-C-', after)
+
     def setUp(self):
         fixture = Path('/tmp/ledger-current.md')
         if not fixture.exists():
