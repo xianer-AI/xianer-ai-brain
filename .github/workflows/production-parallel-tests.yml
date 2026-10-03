@@ -1,0 +1,36 @@
+name: 生产工作台回归测试
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/production-parallel/**'
+      - '.github/workflows/production-parallel-tests.yml'
+  pull_request:
+    paths:
+      - 'scripts/production-parallel/**'
+      - '.github/workflows/production-parallel-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: 准备真实台账测试样本
+        run: |
+          cp '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md' /tmp/ledger-current.md
+      - name: 运行本次故障专项回归测试
+        working-directory: scripts/production-parallel
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python3 -m unittest             test_deterministic_upload.ProductionStatusRegressionTests             test_coverage_tables.CoverageTableTests.test_confirmed_status_suppresses_stale_pending_queue
+      - name: 运行核心覆盖表测试
+        working-directory: scripts/production-parallel
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python3 -m unittest test_coverage_tables.py
