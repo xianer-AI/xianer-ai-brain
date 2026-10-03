@@ -655,10 +655,12 @@ def _update_month_status_notes(text, pending_queue):
         section = old.sub('\n', section)
         notes = _month_status_summary(text, year, month, pending_queue)
         if notes:
-            block = '\n' + marker + '\n' + '\n'.join(notes) + '\n' + close_marker + '\n\n'
+            block = marker + '\n' + '\n'.join(notes) + '\n' + close_marker
             daily = section.find(_daily_heading(year, month))
             insert_at = daily if daily >= 0 else len(section)
-            section = section[:insert_at] + block + section[insert_at:]
+            before = section[:insert_at].rstrip()
+            after = section[insert_at:].lstrip('\n')
+            section = before + '\n\n' + block + ('\n\n' + after if after else '\n')
         text = text[:start] + section + text[end:]
     return text
 
