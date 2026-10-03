@@ -694,7 +694,9 @@ def _normalize_monthly_empty_rows(text):
 
 
 _VERSION_SECTION_RE = re.compile(
-    r'^## (?:十二、)?三端当前版本与同步状态（自动维护）\s*$'  # noqa: E501
+    r'^## (?:十二、)?三端当前版本与同步状态（自动维护）\s*$',
+    re.M,
+    # noqa: E501
 )
 
 
@@ -728,10 +730,11 @@ def _update_version_status_section(text, year):
         prior_anchor = text.rfind(anchor.rstrip('\n'), 0, start)
         if prior_anchor >= 0 and not text[prior_anchor + len(anchor.rstrip('\n')):start].strip():
             start = prior_anchor
-        next_heading = re.search(r'^## ', text[start_match.end():], re.M)
-        next_start = start_match.end() + next_heading.start() if next_heading else len(text)
         return_pos = text.find(return_link, start_match.end())
-        end = min(value for value in (next_start, return_pos if return_pos >= 0 else len(text)))
+        # The block lives at the end of the audit appendix.  Replacing all
+        # content through the final directory link also collapses any legacy
+        # duplicate blocks created by an older non-idempotent runtime.
+        end = return_pos if return_pos >= 0 else len(text)
         return text[:start] + block + '\n' + text[end:]
     insert_at = text.rfind(return_link)
     if insert_at < 0:
