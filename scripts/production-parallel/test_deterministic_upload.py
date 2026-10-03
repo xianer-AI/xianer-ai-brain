@@ -123,7 +123,7 @@ class DeterministicCandidateTests(unittest.TestCase):
         self.assertIn('| B｜梅芳 | 下机 | 1 | 2 | 3 | 4 | 5 | 6 | 21 | 1日 | 2027-01-01 |', candidate)
         self.assertIn('### B｜2027年1月个人累计', candidate)
         self.assertIn('### 2027年1月每日汇总', candidate)
-        self.assertIn('| B｜梅芳 | 下机 | — | — | — | — | — | — | — | — | — |', candidate)
+        self.assertIn('| B｜梅芳 | 下机 | — | — | — | — | — | — | — | 0日 | — |', candidate)
         # No 2027-01 rows may appear in February's monthly section.
         def first_heading(*heads):
             return next(index for head in heads if (index := candidate.find(head)) >= 0)

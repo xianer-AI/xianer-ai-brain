@@ -310,7 +310,10 @@ def _month_rows(worker, values=None, latest='—', dates=(), *, empty=False):
         values = {product: '—' for product in PRODUCTS}
         empty = True
     subtotal = '—' if empty else sum(values[product] for product in PRODUCTS)
-    day_count = '—' if empty else f'{len(dates)}日'
+    # An empty monthly row is a real employee/month slot.  Keep its product
+    # cells and subtotal as dashes, but make the production-day count explicit
+    # so it cannot be mistaken for an omitted field.
+    day_count = '0日' if empty else f'{len(dates)}日'
     return ('| ' + ' | '.join([f'{worker}｜{WORKERS[worker][0]}', WORKERS[worker][1],
                                *[values[p] for p in PRODUCTS], subtotal, day_count, latest]) + ' |')
 
@@ -322,7 +325,8 @@ def _ensure_month_section(text, year, month):
         start, end = bounds
         section = text[start:end]
         # Existing ledgers may predate D's mapping; add only missing worker
-        # rows and leave every existing cell untouched.
+        # rows.  Normalize legacy empty rows while leaving real quantities and
+        # explicit zero reports untouched.
         lines = section.splitlines()
         separator = next((i for i, line in enumerate(lines) if line.startswith('|---')), None)
         if separator is not None:
@@ -332,6 +336,13 @@ def _ensure_month_section(text, year, month):
                 key = f'{worker}｜{WORKERS[worker][0]}'
                 if key not in present:
                     inserts.append(_month_rows(worker))
+            for index in range(separator + 1, len(lines)):
+                fields = _row_parts(lines[index]) if lines[index].startswith('|') else []
+                if len(fields) < 11 or not fields[0].startswith(tuple(f'{code}｜' for code in WORKERS)):
+                    continue
+                if all(fields[position] == '—' for position in range(2, 9)) and fields[9] == '—':
+                    fields[9] = '0日'
+                    lines[index] = '| ' + ' | '.join(fields) + ' |'
             if inserts:
                 insert_at = len(lines)
                 for i in range(separator + 1, len(lines)):
@@ -546,6 +557,206 @@ def _update_monthly(text, worker, totals, dates, latest):
     return text[:start] + '\n'.join(lines).rstrip('\n') + '\n' + text[end:]
 
 
+def _pending_queue_from_coverage(text):
+    """Recover queue states from an existing coverage table.
+
+    Production uploads may rebuild the coverage view before the durable queue
+    snapshot is passed in.  Reading the old table here keeps an already-sent
+    card visible during that short interval instead of downgrading it to a
+    generic missing record.
+    """
+    result = []
+    start = text.find('### 待核实日期')
+    if start < 0:
+        return result
+    end_match = re.search(r'^### |^## ', text[start + len('### 待核实日期'):], re.M)
+    end = start + len('### 待核实日期') + end_match.start() if end_match else len(text)
+    chunk = text[start:end]
+    states = {
+        '核实卡已发送，等待回复': 'sent',
+        '待核实，排队等待处理': 'pending',
+        '核实卡发送失败，等待重试': 'failed',
+    }
+    for match in re.finditer(
+        r'^\|\s*([ABCD])｜([^|]+)\s*\|\s*(20\d{2}年\d{1,2}月\d{1,2}日|20\d{2}-\d{2}-\d{2})\s*\|\s*([^|]+)\|',
+        chunk, re.M,
+    ):
+        code, raw_date, state_text = match.group(1), match.group(3), match.group(4).strip()
+        state = next((value for label, value in states.items() if label in state_text), None)
+        if not state:
+            continue
+        iso = re.search(r'(20\d{2})年(\d{1,2})月(\d{1,2})日', raw_date)
+        if iso:
+            raw_date = f'{int(iso.group(1)):04d}-{int(iso.group(2)):02d}-{int(iso.group(3)):02d}'
+        result.append({'worker': code, 'production_date': raw_date, 'state': state})
+    return result
+
+
+def _month_status_summary(text, year, month, pending_queue):
+    """Build short status notes for one month directly below its table."""
+    status_map = _attendance_status_map(text)
+    pending = {}
+    for item in pending_queue or ():
+        code = str(item.get('worker') or '')
+        raw_date = str(item.get('production_date') or '')
+        if code not in WORKERS or not re.fullmatch(r'20\d{2}-\d{2}-\d{2}', raw_date):
+            continue
+        if raw_date[:7] != f'{year:04d}-{month:02d}':
+            continue
+        state = str(item.get('state') or 'pending')
+        if state in {'pending', 'sent', 'failed'}:
+            pending[(code, raw_date)] = state
+    state_labels = {
+        'sent': '待核实（核实卡已发送，等待回复）',
+        'pending': '待核实（排队等待处理）',
+        'failed': '待核实（核实卡发送失败，等待重试）',
+    }
+    entries = []
+    for code, (name, _process) in WORKERS.items():
+        pieces = []
+        dates = set()
+        for raw_date, status in sorted(status_map.get(code, {}).items()):
+            if raw_date[:7] != f'{year:04d}-{month:02d}':
+                continue
+            dates.add(raw_date)
+            day = int(raw_date[8:10])
+            if status == 'not_worked':
+                pieces.append(f'{month}月{day}日已确认未上班')
+            else:
+                pieces.append(f'{month}月{day}日已确认已报待查')
+        for (pending_code, raw_date), state in sorted(pending.items()):
+            if pending_code != code or raw_date in dates:
+                continue
+            day = int(raw_date[8:10])
+            pieces.append(f'{month}月{day}日{state_labels[state]}')
+        if pieces:
+            entries.append(f'> {code}｜{name}：' + '；'.join(pieces) + '。')
+    return entries
+
+
+def _update_month_status_notes(text, pending_queue):
+    """Place a de-duplicated status note immediately below each month table."""
+    month_matches = list(re.finditer(
+        r'^## [^\n]*?(20\d{2})年(\d{1,2})月月度汇总\s*$', text, re.M
+    ))
+    for match in reversed(month_matches):
+        year, month = int(match.group(1)), int(match.group(2))
+        bounds = _month_section_bounds(text, year, month)
+        if not bounds:
+            continue
+        start, end = bounds
+        section = text[start:end]
+        marker = f'<!-- monthly-status-summary:{year:04d}-{month:02d} -->'
+        close_marker = f'<!-- /monthly-status-summary:{year:04d}-{month:02d} -->'
+        old = re.compile(
+            rf'\n?{re.escape(marker)}\n.*?{re.escape(close_marker)}\n?',
+            re.S,
+        )
+        section = old.sub('\n', section)
+        notes = _month_status_summary(text, year, month, pending_queue)
+        if notes:
+            block = '\n' + marker + '\n' + '\n'.join(notes) + '\n' + close_marker + '\n\n'
+            daily = section.find(_daily_heading(year, month))
+            insert_at = daily if daily >= 0 else len(section)
+            section = section[:insert_at] + block + section[insert_at:]
+        text = text[:start] + section + text[end:]
+    return text
+
+
+def _normalize_monthly_empty_rows(text):
+    """Normalize every legacy empty monthly row to an explicit ``0日``."""
+    month_matches = list(re.finditer(
+        r'^## [^\n]*?(20\d{2})年(\d{1,2})月月度汇总\s*$', text, re.M
+    ))
+    for match in reversed(month_matches):
+        bounds = _month_section_bounds(text, int(match.group(1)), int(match.group(2)))
+        if not bounds:
+            continue
+        start, end = bounds
+        lines = text[start:end].splitlines()
+        separator = next((i for i, line in enumerate(lines) if line.startswith('|---')), None)
+        if separator is None:
+            continue
+        changed = False
+        for index in range(separator + 1, len(lines)):
+            fields = _row_parts(lines[index]) if lines[index].startswith('|') else []
+            if len(fields) < 11 or not any(fields[0] == f'{code}｜{name}' for code, (name, _process) in WORKERS.items()):
+                continue
+            if all(fields[position] == '—' for position in range(2, 9)) and fields[9] == '—':
+                fields[9] = '0日'
+                lines[index] = '| ' + ' | '.join(fields) + ' |'
+                changed = True
+        if changed:
+            text = text[:start] + '\n'.join(lines).rstrip('\n') + '\n' + text[end:]
+    return text
+
+
+_VERSION_SECTION_RE = re.compile(
+    r'^## (?:十二、)?三端当前版本与同步状态（自动维护）\s*$'  # noqa: E501
+)
+
+
+def _version_status_block():
+    """Read the canonical version/sync block from VERSION.md."""
+    version_path = Path(__file__).resolve().parents[2] / '袜子生产制造袜子厂' / '生产统计工作台' / 'VERSION.md'
+    try:
+        source = version_path.read_text(encoding='utf-8')
+        match = re.search(r'^## 三端当前版本与同步状态（自动维护）\s*$.*?(?=^## |\Z)', source, re.M | re.S)
+        if match:
+            return match.group(0).rstrip() + '\n'
+    except OSError:
+        pass
+    return ('## 三端当前版本与同步状态（自动维护）\n\n'
+            '本区域不属于年度台账，也不记录员工生产数据；它只用于查看 GitHub、OpenClaw 和飞书当前是否使用同一套规则。\n\n'
+            '| 端 | 当前版本 | 对应提交/标识 | 最后同步时间 | 状态 |\n'
+            '|---|---|---|---|---|\n'
+            '| GitHub | 由规则源自动读取 | VERSION.json.github_commit | 自动记录 | 自动判断 |\n'
+            '| OpenClaw | 由实际加载的 VERSION.json 自动读取 | sync_protocol_version / card_protocol_version | 自动记录 | 自动判断 |\n'
+            '| 飞书 | 由当前卡片模板和回读结果自动读取 | 卡片协议版本 / 平台回读标识 | 自动记录 | 自动判断 |\n')
+
+
+def _update_version_status_section(text, year):
+    """Mirror VERSION.md's canonical sync-status block into a yearly ledger."""
+    anchor = f'<a id="version-sync-{year}"></a>\n\n'
+    block = anchor + _version_status_block()
+    start_match = _VERSION_SECTION_RE.search(text)
+    return_link = f'[↑ 返回目录](#ledger-toc-{year})'
+    if start_match:
+        start = start_match.start()
+        prior_anchor = text.rfind(anchor.rstrip('\n'), 0, start)
+        if prior_anchor >= 0 and not text[prior_anchor + len(anchor.rstrip('\n')):start].strip():
+            start = prior_anchor
+        next_heading = re.search(r'^## ', text[start_match.end():], re.M)
+        next_start = start_match.end() + next_heading.start() if next_heading else len(text)
+        return_pos = text.find(return_link, start_match.end())
+        end = min(value for value in (next_start, return_pos if return_pos >= 0 else len(text)))
+        return text[:start] + block + '\n' + text[end:]
+    insert_at = text.rfind(return_link)
+    if insert_at < 0:
+        insert_at = len(text)
+    prefix = '' if insert_at == 0 or text[:insert_at].endswith('\n') else '\n'
+    return text[:insert_at] + prefix + block + '\n' + text[insert_at:]
+
+
+def _ensure_version_toc_link(text, year):
+    anchor = f'#version-sync-{year}'
+    if anchor in text:
+        return text
+    link = f'[三端当前版本与同步状态（自动维护）]({anchor})'
+    if year == 2026:
+        needle = re.compile(r'^11\. \[十一、更新记录\].*$', re.M)
+    else:
+        needle = re.compile(r'^18\. \[附录：审计与版本记录\].*$', re.M)
+    match = needle.search(text)
+    if not match:
+        return text
+    if year == 2026:
+        line = f'12. {link}'
+    else:
+        line = f'   - {link}'
+    return text[:match.end()] + '\n' + line + text[match.end():]
+
+
 def _update_coverage(text, worker, dates, latest, *, pending_queue=None):
     """Replace the derived coverage section with the compact two-table view.
 
@@ -586,6 +797,9 @@ def _update_coverage(text, worker, dates, latest, *, pending_queue=None):
     if not keep_directory:
         end_match = re.search(r'^## (?!人员生产记录覆盖情况)', tail, re.M)
         end = start + len(marker) + end_match.start() if end_match else len(text)
+    # Preserve operational queue states if this invocation came from a
+    # production upload rather than the scheduler's durable snapshot.
+    effective_pending = list(pending_queue) if pending_queue is not None else _pending_queue_from_coverage(text)
     date_map = {}
     backfill_map = {}
     for code in WORKERS:
@@ -611,11 +825,16 @@ def _update_coverage(text, worker, dates, latest, *, pending_queue=None):
     rendered = coverage_tables.render(
         date_map, months, backfill_map=backfill_map,
         attendance_status_map=_attendance_status_map(text),
-        pending_queue=pending_queue,
+        pending_queue=effective_pending,
     )
-    if keep_directory:
-        return text[:start] + rendered + directory + text[end:]
-    return text[:start] + rendered + text[end:]
+    candidate = text[:start] + rendered + (directory if keep_directory else '') + text[end:]
+    candidate = _update_month_status_notes(candidate, effective_pending)
+    candidate = _normalize_monthly_empty_rows(candidate)
+    year = months[0][0] if months else int(latest[:4]) if latest and re.match(r'20\d{2}-', latest) else None
+    if year:
+        candidate = _ensure_version_toc_link(candidate, year)
+        candidate = _update_version_status_section(candidate, year)
+    return candidate
 
 
 def _update_daily(text, worker, report):
