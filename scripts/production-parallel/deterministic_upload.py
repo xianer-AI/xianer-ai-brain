@@ -714,9 +714,9 @@ def _version_status_block():
             '本区域不属于年度台账，也不记录员工生产数据；它只用于查看 GitHub、OpenClaw 和飞书当前是否使用同一套规则。\n\n'
             '| 端 | 当前版本 | 对应提交/标识 | 最后同步时间 | 状态 |\n'
             '|---|---|---|---|---|\n'
-            '| GitHub | 由规则源自动读取 | VERSION.json.github_commit | 自动记录 | 自动判断 |\n'
-            '| OpenClaw | 由实际加载的 VERSION.json 自动读取 | sync_protocol_version / card_protocol_version | 自动记录 | 自动判断 |\n'
-            '| 飞书 | 由当前卡片模板和回读结果自动读取 | 卡片协议版本 / 平台回读标识 | 自动记录 | 自动判断 |\n')
+            '| GitHub | **V1.17**（由规则源自动读取） | VERSION.json.github_commit | 自动记录 | 自动判断 |\n'
+            '| OpenClaw | **V1.17**（由实际加载的 VERSION.json 自动读取） | sync_protocol_version / card_protocol_version | 自动记录 | 自动判断 |\n'
+            '| 飞书 | **V1.17**（由当前卡片模板和回读结果自动读取） | 卡片协议版本 / 平台回读标识 | 自动记录 | 自动判断 |\n')
 
 
 def _update_version_status_section(text, year):
