@@ -17,6 +17,21 @@ WORKERS = {
     "D": "张小翠",
 }
 
+def validate_status_exclusivity(text: str) -> None:
+    """Reject a coverage view where one employee/date has two final states."""
+    import re
+    pending = set()
+    confirmed = set()
+    section = text[text.find('### 待核实日期'):text.find('### 已确认出勤状态日期')]
+    for code, y, m, d in re.findall(r'^\|\s*([ABCD])｜[^|]+\s*\|\s*(20\d{2})年(\d{1,2})月(\d{1,2})日', section, re.M):
+        pending.add((code, f'{y}-{int(m):02d}-{int(d):02d}'))
+    section = text[text.find('### 已确认出勤状态日期'):]
+    for code, y, m, d in re.findall(r'^\|\s*([ABCD])｜[^|]+\s*\|\s*(20\d{2})年(\d{1,2})月(\d{1,2})日', section, re.M):
+        confirmed.add((code, f'{y}-{int(m):02d}-{int(d):02d}'))
+    conflict = sorted(pending & confirmed)
+    if conflict:
+        raise ValueError('状态冲突，禁止发布：' + '、'.join(f'{c}:{d}' for c, d in conflict))
+
 # A/B have fixed rota coverage and C is a long-term worker.  D remains ad-hoc
 # and is only checked when an attendance gate explicitly supplies a workday.
 # The renderer infers only historical interior gaps up to each worker's latest

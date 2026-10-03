@@ -249,6 +249,7 @@ def sync_pending_queue_to_github(
                 before, '', set(), current.date().isoformat(),
                 pending_queue=year_pending,
             )
+            coverage_tables.validate_status_exclusivity(candidate)
             if candidate == before:
                 results.append({'year': str(year), 'status': 'unchanged'})
                 continue
