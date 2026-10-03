@@ -833,9 +833,23 @@ def _update_coverage(text, worker, dates, latest, *, pending_queue=None):
         pending_queue=effective_pending,
     )
     candidate = text[:start] + rendered + (directory if keep_directory else '') + text[end:]
+    # Keep the explicit return-directory anchor in the generated ledger.  The
+    # coverage replacement starts before the directory and would otherwise
+    # drop an anchor that sits immediately above ``## 目录`` on every status
+    # refresh.  Reinsert one canonical anchor so the scheduler cannot undo
+    # the working return links.
+    year = months[0][0] if months else int(latest[:4]) if latest and re.match(r'20\d{2}-', latest) else None
+    if year:
+        candidate = re.sub(r'^<a id="ledger-toc-20\d{2}"></a>\s*\n?', '', candidate, flags=re.M)
+        toc_heading = candidate.find('## 目录')
+        if toc_heading >= 0:
+            candidate = (
+                candidate[:toc_heading]
+                + f'<a id="ledger-toc-{year}"></a>\n\n'
+                + candidate[toc_heading:]
+            )
     candidate = _update_month_status_notes(candidate, effective_pending)
     candidate = _normalize_monthly_empty_rows(candidate)
-    year = months[0][0] if months else int(latest[:4]) if latest and re.match(r'20\d{2}-', latest) else None
     if year:
         candidate = _ensure_version_toc_link(candidate, year)
         candidate = _update_version_status_section(candidate, year)
