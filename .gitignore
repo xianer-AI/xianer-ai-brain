@@ -1,2 +1,13 @@
 .DS_Store
 **/.DS_Store
+
+# Local production-parallel runtime state; source code remains versioned.
+scripts/production-parallel/__pycache__/
+scripts/production-parallel/*.sqlite
+scripts/production-parallel/*.sqlite3
+scripts/production-parallel/*.log
+scripts/production-parallel/receipts/
+scripts/group-companion/__pycache__/
+scripts/group-companion/*.sqlite
+scripts/group-companion/*.sqlite3
+scripts/group-companion/*.log
