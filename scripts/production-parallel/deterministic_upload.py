@@ -959,7 +959,19 @@ def build_candidate(before, report, source, confirmation):
             all_totals, all_dates = _records(after, worker)
         except RuntimeError:
             all_totals, all_dates = ({product: 0 for product in PRODUCTS}, set())
-        month_totals, month_dates = _records(after, worker, period) if all_dates else ({product: 0 for product in PRODUCTS}, set())
+        # A status-only confirmation may target a new month with no detail
+        # rows yet, while the employee still has historical detail rows.
+        # Keep the historical totals, but treat the target month as empty
+        # instead of letting _records() reject the valid status-only task.
+        if all_dates:
+            try:
+                month_totals, month_dates = _records(after, worker, period)
+            except RuntimeError as exc:
+                if str(exc) != '新增后没有可计算的员工明细':
+                    raise
+                month_totals, month_dates = ({product: 0 for product in PRODUCTS}, set())
+        else:
+            month_totals, month_dates = ({product: 0 for product in PRODUCTS}, set())
         month_latest = max(month_dates) if month_dates else None
         after = _ensure_month_section(after, report['year'], report['month'])
         if all_dates:
