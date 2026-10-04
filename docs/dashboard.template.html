@@ -16,19 +16,11 @@
 .history-wrap{overflow:auto;margin:10px 0 26px}.history-table{min-width:980px}.history-table th,.history-table td{font-size:13px;padding:9px 7px}.history-table th{white-space:nowrap}.history-total{font-weight:700;color:#1f2937}
 .section-note{margin:-10px 0 16px}.summary-table{min-width:980px}.summary-table th,.summary-table td{font-size:13px;padding:10px 8px}.summary-table th{white-space:nowrap}.summary-total{font-weight:700;color:#1f2937}.subsection{margin:20px 0 8px;font-size:18px}.state-confirmed{color:#147a43;font-weight:600}.state-pending{color:#9a3412;font-weight:600}.state-absent{color:#64748b;font-weight:600}.state-none{color:#94a3b8}.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 14px}.filter-bar label{color:#475569;font-size:14px}.filter-bar select{border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:7px 10px;color:#1f2937}.employee-details{display:grid;gap:10px;margin:10px 0 26px}.employee-details details{border:1px solid #e2e8f0;border-radius:10px;background:#fff;overflow:hidden}.employee-details summary{cursor:pointer;list-style:none;padding:13px 15px;background:#f8fafc;font-weight:700}.employee-details summary::-webkit-details-marker{display:none}.employee-details summary::before{content:'＋';display:inline-block;width:20px;color:#64748b}.employee-details details[open] summary::before{content:'−'}.employee-details .history-wrap{margin:0;padding:0 12px 12px}.month-block{margin:0 0 22px}.month-block:last-child{margin-bottom:0}
 </style>
-<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>产能总览</h2><p class="muted section-note">统计只按员工和工序分别计算，不把徐超超、梅芳、李鸿玉、张小翠合并。</p><div id="capacity"></div><h2>2026年下半年累计产能</h2><p class="muted section-note">这是当前台账覆盖周期的累计，不把没有数据的上半年当作全年。</p><div id="period-summary"></div><h2>月产能汇总</h2><p class="muted section-note">每个月单独统计产品数量、合计、有效生产天数和出勤状态。</p><div id="monthly-summary"></div><h2>每日生产产能</h2><p class="muted section-note">每天固定按员工展示；明确未上班、待核实和无记录不会被当成0。A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div class="filter-bar"><label for="daily-range">显示范围</label><select id="daily-range"><option value="all">全部日期</option><option value="5">最近5天</option></select><span class="muted">当前数据按日期从新到旧显示</span></div><div id="daily"></div><h2>员工生产明细</h2><p class="muted section-note">按员工分组查看全部日期；数值为“核实”的产品保留原状态，但不计入已确认产能。</p><div id="history"></div><p class="muted">页面每 30 秒刷新台账快照；GitHub/台账更新后由腾讯云 CloudBase 自动发布，刷新即可看到最新数据。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
+<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>产能总览</h2><p class="muted section-note">统计只按员工和工序分别计算，不把徐超超、梅芳、李鸿玉、张小翠合并。</p><div id="capacity"></div><h2>2026年下半年累计产能</h2><p class="muted section-note">这是当前台账覆盖周期的累计，不把没有数据的上半年当作全年。</p><div id="period-summary"></div><h2>月产能汇总</h2><p class="muted section-note">每个月单独统计产品数量、合计、有效生产天数和出勤状态。</p><div id="monthly-summary"></div><h2>每日生产产能</h2><p class="muted section-note">每天固定按员工展示；明确未上班、待核实和无记录不会被当成0。这里只看产能，不把排班信息混进产能表。</p><div class="filter-bar"><label for="daily-range">显示范围</label><select id="daily-range"><option value="all">全部日期</option><option value="5">最近5天</option></select><span class="muted">当前数据按日期从新到旧显示</span></div><div id="daily"></div><h2>员工生产明细</h2><p class="muted section-note">按员工分组查看全部日期；数值为“核实”的产品保留原状态，但不计入已确认产能。</p><div id="history"></div><p class="muted">页面每 30 秒刷新台账快照；GitHub/台账更新后由腾讯云 CloudBase 自动发布，刷新即可看到最新数据。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
 <script>
 let md=window.__LEDGER__||'';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cn=t=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(t).replaceAll('/','-');
-function shiftFor(date,person){
-  const isA=/A\s*[｜|]\s*徐超超/.test(person), isB=/B\s*[｜|]\s*梅芳/.test(person);
-  if(!isA&&!isB)return '白天/不固定';
-  const day=Number(date.slice(8,10));
-  const aIsDay=day>=16;
-  const isDay=isA?aIsDay:!aIsDay;
-  return isDay?'白班':'夜班';
-}
 function syncRowsFromLedger(){
   const section=(md.match(/### 同步状态([\s\S]*?)(?=### 异常检查|$)/)||[])[1]||'';
   const rows=[];
@@ -198,7 +190,7 @@ function makeDailyRows(records,workers,statusMap,dates){
       const rawStatus=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
       const values=rec?rec.values.slice(0,6):PRODUCTS.map(()=> '—');
       const subtotal=rec&&recordSubtotal(rec)!==null?numberText(recordSubtotal(rec)):'—';
-      rows.push(`<tr><td>${date}</td><td>${esc(rec?shiftFor(date,worker.person):shiftFor(date,worker.person))}</td><td>${esc(worker.person)}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(rawStatus)}</td></tr>`);
+      rows.push(`<tr><td>${date}</td><td>${esc(worker.person)}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(rawStatus)}</td></tr>`);
     }
   }
   return rows;
@@ -208,7 +200,7 @@ function renderDaily(records,workers,statusMap){
   const range=document.querySelector('#daily-range')?.value||'all';
   const dates=range==='5'?allDates.slice(0,5):allDates;
   const rows=makeDailyRows(records,workers,statusMap,dates);
-  document.querySelector('#daily').innerHTML=rows.length?`<div class="history-wrap"><table class="history-table"><thead><tr><th>日期</th><th>班次</th><th>人员</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`:'<p class="muted">暂无每日记录</p>';
+  document.querySelector('#daily').innerHTML=rows.length?`<div class="history-wrap"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`:'<p class="muted">暂无每日记录</p>';
 }
 function renderHistory(records,workers,statusMap){
   const allDates=[...new Set([...records.map(r=>r.date),...[...statusMap.keys()].map(k=>k.split('|')[0])])].sort().reverse();
@@ -219,9 +211,9 @@ function renderHistory(records,workers,statusMap){
       const rec=byKey.get(`${date}|${worker.person}`), state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
       const values=rec?rec.values.slice(0,6):PRODUCTS.map(()=> '—');
       const subtotal=rec&&recordSubtotal(rec)!==null?numberText(recordSubtotal(rec)):'—';
-      return `<tr><td>${date}</td><td>${esc(shiftFor(date,worker.person))}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(state)}</td></tr>`;
+      return `<tr><td>${date}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(state)}</td></tr>`;
     }).join('');
-    return `<details open><summary>${esc(worker.person)} · ${esc(worker.process)}（${dates.length} 条记录）</summary>${rows?`<div class="history-wrap"><table class="history-table"><thead><tr><th>日期</th><th>班次</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">暂无记录</p>'}</details>`;
+    return `<details open><summary>${esc(worker.person)} · ${esc(worker.process)}（${dates.length} 条记录）</summary>${rows?`<div class="history-wrap"><table class="history-table"><thead><tr><th>日期</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">暂无记录</p>'}</details>`;
   }).join('')}</div>`;
 }
 function bindDailyFilter(){
