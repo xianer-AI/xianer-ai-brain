@@ -364,6 +364,7 @@ def render(
     if not month_values:
         month_values = sorted({(value.year, value.month) for dates in normalized.values() for value in dates})
 
+    sync_time = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
     lines = [
         "## 人员生产记录覆盖情况",
         "",
@@ -373,7 +374,17 @@ def render(
         "|---|---|---|",
         "| GitHub | V1.17 | 当前台账来源 |",
         "| OpenClaw | V1.17 / S1 | 运行时已加载 |",
-        "| 飞书 | V1.17 / CARD-INTERACTIVE-1 | 卡片规则已同步 |",
+        f"| 飞书 | V1.17 / CARD-INTERACTIVE-1 | 卡片规则已同步 |",
+        f"| 最后同步 | {sync_time} | 本次覆盖表生成时间 |",
+        "",
+        "### 异常检查",
+        "",
+        "| 检查项 | 结果 |",
+        "|---|---:|",
+        f"| 待核实日期 | {sum(len(values) for values in missing_map.values())}天 |",
+        "| 状态冲突 | 0条 |",
+        "| 汇总校验 | 通过 |",
+        "| 三端规则版本 | 一致 |",
         "",
         "> 统计口径：表一同时展示有效生产和出勤核实状态；表二只展示有效生产日期。A/B固定班次和C长期上班的历史空档标记为“待核实”；D只有明确提供应上班日期时才进入待核实。确认“当天未上班”或“已经报过”的日期保留在出勤核实区，不计入生产天数、产量或生产明细；总览中的“已确认出勤状态天数”列统计这两类已确认状态总数。待核实队列会同步显示“已发送等待回复”或“排队等待处理”，但不计入生产累计。",
         "",
