@@ -385,7 +385,7 @@ def render(
         f"| GitHub | V1.17 | {status['GitHub']} | {sync_time} |",
         f"| OpenClaw | V1.17 / S1 | {status['OpenClaw']} | {sync_time} |",
         f"| 飞书 | V1.17 / CARD-INTERACTIVE-1 | {status['飞书']} | {sync_time} |",
-        "> 页面自动刷新：每30秒读取最新台账；页面刷新时间与各平台最后成功同步时间分开显示。",
+        "> 页面每30秒刷新已发布台账快照；GitHub更新并完成Cloudflare自动构建后显示最新数据；页面刷新时间与各平台最后成功同步时间分开显示。",
         "",
         "### 异常检查",
         "",

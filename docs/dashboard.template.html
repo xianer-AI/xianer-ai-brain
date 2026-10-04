@@ -8,8 +8,12 @@
 .status-content{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .business-pending{display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;padding:3px 9px;border:1px solid #bfdbfe;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:600;line-height:1.6}
 .waiting{color:#9a3412;font-weight:600}
+.freshness{display:flex;gap:14px;flex-wrap:wrap;margin:-12px 0 18px;color:#64748b;font-size:13px}
+.task-health{margin:-8px 0 18px;padding:10px 14px;border:1px solid #dbe5f0;border-radius:10px;background:#f8fafc;color:#475569;font-size:14px}
+.task-health.ok{background:#eef7f1;border-color:#cce8d5;color:#176b3a}
+.task-health.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}
 </style>
-<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>每日生产产品明细</h2><p class="muted">最近显示3天；A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div id="overview"></div><p class="muted">页面每 30 秒刷新台账快照；GitHub 更新并完成 Cloudflare 自动构建后显示最新数据。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
+<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>每日生产产品明细</h2><p class="muted">最近显示3天；A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div id="overview"></div><p class="muted">页面每 30 秒刷新台账快照；GitHub 更新并完成 Cloudflare 自动构建后显示最新数据。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
 <script>
 let md=window.__LEDGER__||'';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -51,6 +55,17 @@ function renderAlerts(stamp,syncRows){
   }else alerts.push({kind:'error',text:'异常告警：没有读取到台账最后同步时间。'});
   document.querySelector('#alerts').innerHTML=alerts.length?alerts.map(a=>`<div class="alert ${a.kind}">${esc(a.text)}</div>`).join(''):'<div class="alert ok">✓ 当前没有发现异常</div>';
 }
+function renderTaskHealth(syncRows){
+  const el=document.querySelector('#task-health');
+  const failed=syncRows.filter(row=>/失败|异常|卡住|阻塞|重试|reply_pending|待处理/.test(row.status));
+  if(failed.length){
+    el.className='task-health error';
+    el.innerHTML=`⚠ 上传/回执异常任务：${failed.length} 条 · ${failed.map(row=>`${esc(row.source)}：${esc(row.status)}`).join('；')}`;
+  }else{
+    el.className='task-health ok';
+    el.textContent='✓ 当前没有上传失败、回执失败或卡住任务';
+  }
+}
 function refresh(){
   const now=new Date();
   try{
@@ -59,7 +74,9 @@ function refresh(){
     const stamp=syncRows[0]?.time||(md.match(/最后同步\s*\|\s*([^|]+)/)||[])[1]?.trim()||'台账未记录';
     document.querySelector('#banner').className='banner';
     document.querySelector('#banner').innerHTML=`<strong>● 数据同步正常</strong><span>页面最后刷新：${esc(cn(now))}</span>`;
+    document.querySelector('#freshness').innerHTML=`<span>台账快照：${esc(stamp)}</span><span>页面刷新：${esc(cn(now))}</span>`;
     renderAlerts(stamp,syncRows);
+    renderTaskHealth(syncRows);
     const defaults=[['GitHub','V1.17'],['OpenClaw','V1.17 / S1'],['飞书','V1.17 / CARD-INTERACTIVE-1']];
     document.querySelector('#sync').innerHTML=defaults.map(([source,version])=>{
       const row=syncRows.find(item=>item.source===source)||{source,version,status:'未记录',time:stamp};
@@ -74,7 +91,6 @@ function refresh(){
     const dateBlocks=[...md.matchAll(/####\s+(20\d{2}-\d{2}-\d{2})([\s\S]*?)(?=\n#{2,}\s|\n<a id=|$)/g)];
     const records=[];
     for(const d of dateBlocks){
-      if(d[1]==='2026-10-01')continue;
       if(!d[2].includes('| 人员 | 工序 |'))continue;
       for(const r of d[2].matchAll(/\|\s*([^|]+)\s*\|\s*(下机|烤边)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/g)){
         records.push({date:d[1],person:r[1].trim(),process:r[2],values:r.slice(3).map(x=>x.trim())});
