@@ -26,6 +26,84 @@ GROUP = 'oc_1f8587b1bcde12a0d1bb6053ab2b748a'
 BACKFILL_CARD_VERSION = 'V1.17-CARD-6'
 DEFAULT_DB = str(Path.home() / '.openclaw/state/production-parallel/inbox.sqlite')
 STATUS_SNAPSHOT_NAME = 'pending_status.json'
+SYNC_HEARTBEAT_SECONDS = 5 * 60
+
+
+def _platform_status(db: str) -> dict[str, str]:
+    """Project durable runtime state into the three ledger status labels.
+
+    The ledger is also consumed by the public dashboard, so keep this
+    projection short and operational.  Missing tables are treated as an
+    empty queue during first boot; the service itself is the evidence that
+    OpenClaw is loaded, while a stale ledger timestamp covers a stopped
+    service that can no longer publish a fresh heartbeat.
+    """
+    status = {
+        'GitHub': '台账已验证',
+        'OpenClaw': '运行端已加载',
+        '飞书': '消息规则已同步',
+    }
+    try:
+        _ensure_delivery_table(db)
+        import queue_store as q
+        with q.conn(db) as c:
+            scheduled_failed = c.execute(
+                "SELECT COUNT(*) FROM scheduled_missing_alerts WHERE state='failed'"
+            ).fetchone()[0]
+            scheduled_pending = c.execute(
+                "SELECT COUNT(*) FROM scheduled_missing_alerts "
+                "WHERE state IN ('pending','sent')"
+            ).fetchone()[0]
+            tables = {row[0] for row in c.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()}
+            receipt_failed = receipt_processing = 0
+            if 'confirmation_receipts' in tables:
+                receipt_failed = c.execute(
+                    "SELECT COUNT(*) FROM confirmation_receipts "
+                    "WHERE status IN ('blocked','reply_blocked')"
+                ).fetchone()[0]
+                receipt_processing = c.execute(
+                    "SELECT COUNT(*) FROM confirmation_receipts "
+                    "WHERE status IN ('pending','pending_dispatch','dispatching','reply_pending')"
+                ).fetchone()[0]
+    except Exception:
+        # A status read must never interrupt the recovery loop.  The next
+        # heartbeat will retry and the dashboard's timestamp check remains
+        # the fallback alarm for a runtime that cannot publish.
+        return status
+    if receipt_failed:
+        status['飞书'] = f'回执发送失败（{receipt_failed}条）'
+    elif scheduled_failed:
+        status['飞书'] = f'提醒发送失败（{scheduled_failed}条）'
+    elif receipt_processing and scheduled_pending:
+        status['飞书'] = f'上传处理中（{receipt_processing}条）；等待核实（{scheduled_pending}条）'
+    elif receipt_processing:
+        status['飞书'] = f'上传处理中（{receipt_processing}条）'
+    elif scheduled_pending:
+        status['飞书'] = f'等待核实（{scheduled_pending}条）'
+    return status
+
+
+def _coverage_sync_time(text: str) -> str | None:
+    import re
+    match = re.search(
+        r'^\|\s*GitHub\s*\|[^|]+\|[^|]+\|\s*(20\d{2}-\d{2}-\d{2}\s+\d{2}:\d{2})\s*\|',
+        text, re.M,
+    )
+    return match.group(1) if match else None
+
+
+def _coverage_platform_status(text: str) -> dict[str, str]:
+    import re
+    section = (re.search(r'### 同步状态([\s\S]*?)(?=\n### 异常检查|\Z)', text) or ('', ''))[1]
+    result = {}
+    for source, value in re.findall(
+        r'^\|\s*(GitHub|OpenClaw|飞书)\s*\|[^|]+\|\s*([^|]+?)\s*\|',
+        section, re.M,
+    ):
+        result[source] = value.strip()
+    return result
 
 
 def date_map_from_ledger(markdown: str) -> dict[str, set[str]]:
@@ -235,6 +313,7 @@ def sync_pending_queue_to_github(
     # Import lazily to avoid the service -> missing_alerts import cycle.
     from deterministic_upload import _update_coverage
 
+    platform_status = _platform_status(db)
     results: list[dict[str, str]] = []
     for year, endpoint in commit_guard.LEDGER_ENDPOINTS.items():
         year_pending = [
@@ -245,9 +324,30 @@ def sync_pending_queue_to_github(
             remote = commit_guard.gh_read_json(endpoint)
             expected_sha = remote['sha']
             before = base64.b64decode(remote['content']).decode('utf-8')
+            previous_time = _coverage_sync_time(before)
+            previous_status = _coverage_platform_status(before)
+            heartbeat_due = True
+            if previous_time:
+                try:
+                    previous_dt = dt.datetime.strptime(previous_time, '%Y-%m-%d %H:%M').replace(
+                        tzinfo=current.tzinfo
+                    )
+                    heartbeat_due = (current - previous_dt).total_seconds() >= SYNC_HEARTBEAT_SECONDS
+                except ValueError:
+                    pass
+            status_changed = any(
+                previous_status.get(source) != value
+                for source, value in platform_status.items()
+            )
+            # A timer tick alone must not create a GitHub commit every 30
+            # seconds.  Publish immediately when a platform/queue state
+            # changes, otherwise emit one heartbeat every five minutes.
+            sync_time = current.strftime('%Y-%m-%d %H:%M') if (status_changed or heartbeat_due or not previous_time) else previous_time
             candidate = _update_coverage(
                 before, '', set(), current.date().isoformat(),
                 pending_queue=year_pending,
+                platform_status=platform_status,
+                sync_time=sync_time,
             )
             coverage_tables.validate_status_exclusivity(candidate)
             if candidate == before:

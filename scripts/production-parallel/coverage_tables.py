@@ -288,6 +288,8 @@ def render(
     pending_queue: Iterable[Mapping[str, str]] | None = None,
     window_start: str | dt.date | None = None,
     window_end: str | dt.date | None = None,
+    platform_status: Mapping[str, str] | None = None,
+    sync_time: str | None = None,
 ) -> str:
     """Build the complete two-table coverage section.
 
@@ -364,7 +366,15 @@ def render(
     if not month_values:
         month_values = sorted({(value.year, value.month) for dates in normalized.values() for value in dates})
 
-    sync_time = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
+    sync_time = sync_time or dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
+    status = {
+        'GitHub': '台账已验证',
+        'OpenClaw': '运行端已加载',
+        '飞书': '消息规则已同步',
+    }
+    for source, value in (platform_status or {}).items():
+        if source in status and value:
+            status[source] = str(value)
     lines = [
         "## 人员生产记录覆盖情况",
         "",
@@ -372,9 +382,9 @@ def render(
         "",
         "| 数据源 | 版本/协议 | 同步状态 | 最后同步成功时间（北京时间） |",
         "|---|---|---|---|",
-        f"| GitHub | V1.17 | 台账已验证 | {sync_time} |",
-        f"| OpenClaw | V1.17 / S1 | 运行端已加载 | {sync_time} |",
-        f"| 飞书 | V1.17 / CARD-INTERACTIVE-1 | 消息规则已同步 | {sync_time} |",
+        f"| GitHub | V1.17 | {status['GitHub']} | {sync_time} |",
+        f"| OpenClaw | V1.17 / S1 | {status['OpenClaw']} | {sync_time} |",
+        f"| 飞书 | V1.17 / CARD-INTERACTIVE-1 | {status['飞书']} | {sync_time} |",
         "> 页面自动刷新：每30秒读取最新台账；页面刷新时间与各平台最后成功同步时间分开显示。",
         "",
         "### 异常检查",

@@ -17,14 +17,25 @@ function shiftFor(date,person){
   const isDay=isA?aIsDay:!aIsDay;
   return isDay?'白班':'夜班';
 }
-function renderAlerts(stamp){
+function syncRowsFromLedger(){
+  const section=(md.match(/### 同步状态([\s\S]*?)(?=### 异常检查|$)/)||[])[1]||'';
+  const rows=[];
+  for(const row of section.matchAll(/\|\s*(GitHub|OpenClaw|飞书)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*(20\d{2}-\d{2}-\d{2}\s+\d{2}:\d{2})\s*\|/g)){
+    rows.push({source:row[1],version:row[2].trim(),status:row[3].trim(),time:row[4].trim()});
+  }
+  return rows;
+}
+function renderAlerts(stamp,syncRows){
   const alerts=[];
   const syncSection=(md.match(/### 同步状态([\s\S]*?)(?=### 异常检查|$)/)||[])[1]||'';
   const checkSection=(md.match(/### 异常检查([\s\S]*?)(?=\n## |\n<a id=|$)/)||[])[1]||'';
   const pending=Number((checkSection.match(/\|\s*待核实日期\s*\|\s*(\d+)/)||[])[1]||0);
   const conflicts=Number((checkSection.match(/\|\s*状态冲突\s*\|\s*(\d+)/)||[])[1]||0);
   const versions=(checkSection.match(/\|\s*三端规则版本\s*\|\s*([^|]+)/)||[])[1]?.trim();
-  if(/上传失败|回执待补|待同步|异常/.test(syncSection))alerts.push({kind:'error',text:'异常告警：同步状态中发现失败或待处理项，请查看飞书状态或运行日志。'});
+  for(const row of syncRows){
+    if(/失败|异常|卡住|阻塞/.test(row.status))alerts.push({kind:'error',text:`异常告警：${row.source}：${row.status}。`});
+    else if(/处理中|等待|待核实|待同步/.test(row.status))alerts.push({kind:'warn',text:`状态提示：${row.source}：${row.status}。`});
+  }
   if(conflicts>0)alerts.push({kind:'error',text:`异常告警：发现${conflicts}条状态冲突。`});
   if(pending>0)alerts.push({kind:'warn',text:`待核实：还有${pending}天生产记录等待核对。`});
   if(versions&&versions!=='一致')alerts.push({kind:'error',text:`版本告警：三端规则版本${versions}。`});
@@ -39,11 +50,19 @@ async function refresh(){
   const now=new Date();
   try{
     if(!md)throw Error('台账内容未嵌入');
-    const stamp=(md.match(/最后同步\s*\|\s*([^|]+)/)||[])[1]?.trim()||'台账未记录';
+    const syncRows=syncRowsFromLedger();
+    const stamp=syncRows[0]?.time||(md.match(/最后同步\s*\|\s*([^|]+)/)||[])[1]?.trim()||'台账未记录';
     document.querySelector('#banner').className='banner';
     document.querySelector('#banner').innerHTML=`<strong>● 数据同步正常</strong><span>页面最后刷新：${esc(cn(now))}</span>`;
-    renderAlerts(stamp);
-    document.querySelector('#sync').innerHTML=`<tr><td>GitHub</td><td>V1.17</td><td class="ok">✓ 台账已嵌入</td><td>${esc(stamp)}</td></tr><tr><td>OpenClaw</td><td>V1.17 / S1</td><td class="ok">✓ 工作台运行中</td><td>${esc(stamp)}</td></tr><tr><td>飞书</td><td>V1.17 / CARD-INTERACTIVE-1</td><td class="ok">✓ 最新台账已同步</td><td>${esc(stamp)}</td></tr>`;
+    renderAlerts(stamp,syncRows);
+    const defaults=[['GitHub','V1.17'],['OpenClaw','V1.17 / S1'],['飞书','V1.17 / CARD-INTERACTIVE-1']];
+    document.querySelector('#sync').innerHTML=defaults.map(([source,version])=>{
+      const row=syncRows.find(item=>item.source===source)||{source,version,status:'未记录',time:stamp};
+      const bad=/失败|异常|卡住|阻塞/.test(row.status), pending=/处理中|等待|待核实|待同步/.test(row.status);
+      const cls=bad?'bad':pending?'':'ok';
+      const icon=bad?'⚠':pending?'⏳':'✓';
+      return `<tr><td>${esc(row.source)}</td><td>${esc(row.version||version)}</td><td class="${cls}">${icon} ${esc(row.status)}</td><td>${esc(row.time||stamp)}</td></tr>`;
+    }).join('');
     const dateBlocks=[...md.matchAll(/####\s+(20\d{2}-\d{2}-\d{2})([\s\S]*?)(?=\n#{2,}\s|\n<a id=|$)/g)];
     const records=[];
     for(const d of dateBlocks){

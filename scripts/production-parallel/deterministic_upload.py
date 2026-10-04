@@ -763,7 +763,8 @@ def _ensure_version_toc_link(text, year):
     return text[:match.end()] + '\n' + line + text[match.end():]
 
 
-def _update_coverage(text, worker, dates, latest, *, pending_queue=None):
+def _update_coverage(text, worker, dates, latest, *, pending_queue=None,
+                     platform_status=None, sync_time=None):
     """Replace the derived coverage section with the compact two-table view.
 
     The old implementation appended every date to one wide cell and treated
@@ -832,6 +833,8 @@ def _update_coverage(text, worker, dates, latest, *, pending_queue=None):
         date_map, months, backfill_map=backfill_map,
         attendance_status_map=_attendance_status_map(text),
         pending_queue=effective_pending,
+        platform_status=platform_status,
+        sync_time=sync_time,
     )
     candidate = text[:start] + rendered + (directory if keep_directory else '') + text[end:]
     # Keep the explicit return-directory anchor in the generated ledger.  The
