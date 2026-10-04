@@ -29,6 +29,7 @@ DETAIL_ROW = re.compile(
 )
 DAY_HEADING = re.compile(r"^### (20\d{2}-\d{2}-\d{2})｜[^\n]+$", re.M)
 SUMMARY_HEADING = re.compile(r"^#### (20\d{2}-\d{2}-\d{2})\s*$", re.M)
+MONTH_SUMMARY_HEADING = re.compile(r"^### 20\d{2}年(?:0?[1-9]|1[0-2])月每日汇总\s*$", re.M)
 SUMMARY_ROW = re.compile(
     r"^\| ([ABCD]｜[^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \| "
     r"([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$",
@@ -87,29 +88,36 @@ def detail_totals(text: str) -> dict[tuple[str, str], dict[str, dict[str, int]]]
 def summary_rows(text: str) -> dict[tuple[str, str], tuple[str, ...]]:
     """Return daily summary rows keyed by (date, worker)."""
 
-    start = text.find("### 2026年9月每日汇总")
-    if start < 0:
-        raise ValueError("缺少 2026年9月每日汇总区")
-    # Daily summaries span the September-to-December month blocks.  The old
-    # boundary stopped at the October heading, so a valid 10/01 detail row was
-    # falsely reported as missing from the daily summary.
-    end = text.find("\n## 七、", start)
-    section = text[start : end if end >= 0 else None]
-    headings = list(SUMMARY_HEADING.finditer(section))
+    # Collect every month block by its heading.  The ledger is routinely
+    # reordered (for example, October appears before September), so parsing
+    # from a single hard-coded month heading silently drops valid rows.
+    month_headings = list(MONTH_SUMMARY_HEADING.finditer(text))
+    if not month_headings:
+        raise ValueError("缺少每日汇总区")
     rows: dict[tuple[str, str], tuple[str, ...]] = {}
-    for index, heading in enumerate(headings):
-        date = heading.group(1)
-        block_end = headings[index + 1].start() if index + 1 < len(headings) else len(section)
-        body = section[heading.end() : block_end]
-        for match in SUMMARY_ROW.finditer(body):
-            worker_label = match.group(1).strip()
-            code, name = worker_label.split("｜", 1)
-            if code not in WORKERS or WORKERS[code][0] != name:
-                raise ValueError(f"{date} 每日汇总人员映射异常：{worker_label}")
-            key = (date, code)
-            if key in rows:
-                raise ValueError(f"{date} 每日汇总重复人员：{worker_label}")
-            rows[key] = tuple(part.strip() for part in match.groups()[1:])
+    for month_index, month_heading in enumerate(month_headings):
+        month_end = (
+            month_headings[month_index + 1].start()
+            if month_index + 1 < len(month_headings)
+            else len(text)
+        )
+        next_section = text.find("\n## ", month_heading.end(), month_end)
+        section_end = next_section if next_section >= 0 else month_end
+        section = text[month_heading.start() : section_end]
+        headings = list(SUMMARY_HEADING.finditer(section))
+        for index, heading in enumerate(headings):
+            date = heading.group(1)
+            block_end = headings[index + 1].start() if index + 1 < len(headings) else len(section)
+            body = section[heading.end() : block_end]
+            for match in SUMMARY_ROW.finditer(body):
+                worker_label = match.group(1).strip()
+                code, name = worker_label.split("｜", 1)
+                if code not in WORKERS or WORKERS[code][0] != name:
+                    raise ValueError(f"{date} 每日汇总人员映射异常：{worker_label}")
+                key = (date, code)
+                if key in rows:
+                    raise ValueError(f"{date} 每日汇总重复人员：{worker_label}")
+                rows[key] = tuple(part.strip() for part in match.groups()[1:])
     return rows
 
 

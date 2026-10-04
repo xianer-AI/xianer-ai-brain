@@ -28,6 +28,15 @@ class ProductionSummaryGuardTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, r"2026-09-26.*B｜梅芳"):
             check_daily_summary(broken)
 
+    def test_reversed_month_blocks_and_cross_month_rows(self):
+        text = LEDGER.read_text(encoding="utf-8")
+        # The current ledger already places October before September.  Keep a
+        # focused regression assertion for the 10/01 cross-month record that
+        # previously disappeared when parsing started at September.
+        self.assertIn("#### 2026-10-01", text)
+        self.assertIn("| B｜梅芳 | 下机 | 2500 | 1700 | 200 | 0 | 0 | 0 | 4400 |", text)
+        self.assertIsNone(check_daily_summary(text))
+
 
 if __name__ == "__main__":
     unittest.main()
