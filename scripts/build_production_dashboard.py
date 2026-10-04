@@ -8,5 +8,5 @@ out = root / 'docs' / 'index.html'
 text = template.read_text(encoding='utf-8')
 data = json.dumps(ledger.read_text(encoding='utf-8'), ensure_ascii=False)
 needle = '<script>'
-text = text.replace(needle, f'<script>window.__LEDGER__={data};const md=window.__LEDGER__||"";', 1)
+text = text.replace(needle, f'<script>window.__LEDGER__={data};', 1)
 out.write_text(text, encoding='utf-8')

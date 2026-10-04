@@ -3,10 +3,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>袜子生产统计工作台</title>
 <style>
-:root{font:16px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202124;background:#f6f8fb}body{margin:0;padding:28px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #d9e0ea;border-radius:16px;padding:28px;box-shadow:0 8px 24px #1e375a14}h1{margin:0 0 4px;font-size:28px}.sub,.muted{color:#6b7280}.banner{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#eef7f1;border:1px solid #cce8d5;border-radius:10px;padding:12px 16px;margin:22px 0;color:#176b3a}.banner.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}.alert-stack{display:grid;gap:8px;margin:-8px 0 18px}.alert{border:1px solid;border-radius:10px;padding:10px 14px}.alert.ok{background:#eef7f1;border-color:#cce8d5;color:#176b3a}.alert.warn{background:#fff9e8;border-color:#f0d890;color:#855d00}.alert.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}table{border-collapse:collapse;width:100%;table-layout:fixed;margin:10px 0 26px}.detail-table{font-size:13px}.detail-table th,.detail-table td{padding:9px 6px}.detail-table th:nth-child(n),.detail-table td:nth-child(n){width:auto}th,td{text-align:left;padding:13px 12px;border-bottom:1px solid #e5eaf0;overflow-wrap:anywhere}th{background:#f3f6fa;color:#4b5563}th:nth-child(1),td:nth-child(1){width:16%}th:nth-child(2),td:nth-child(2){width:25%}th:nth-child(3),td:nth-child(3){width:25%}th:nth-child(4),td:nth-child(4){width:34%;white-space:normal}.ok{color:#147a43;font-weight:600}.bad{color:#a5281b;font-weight:600}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{background:#f7f9fc;border:1px solid #e4e9f0;border-radius:10px;padding:14px}.card b{display:block;font-size:20px;margin-top:5px}@media(max-width:700px){body{padding:12px}main{padding:18px}.cards{grid-template-columns:1fr}th,td{padding:10px 7px;font-size:13px}th:nth-child(2),td:nth-child(2){width:23%}th:nth-child(3),td:nth-child(3){width:25%}th:nth-child(4),td:nth-child(4){width:36%}}
+:root{font:16px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202124;background:#f6f8fb}body{margin:0;padding:28px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #d9e0ea;border-radius:16px;padding:28px;box-shadow:0 8px 24px #1e375a14}h1{margin:0 0 4px;font-size:28px}.sub,.muted{color:#6b7280}.banner{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#eef7f1;border:1px solid #cce8d5;border-radius:10px;padding:12px 16px;margin:22px 0;color:#176b3a}.banner.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}.alert-stack{display:grid;gap:8px;margin:-8px 0 18px}.alert{border:1px solid;border-radius:10px;padding:10px 14px}.alert.ok{background:#eef7f1;border-color:#cce8d5;color:#176b3a}.alert.warn{background:#fff9e8;border-color:#f0d890;color:#855d00}.alert.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}table{border-collapse:collapse;width:100%;table-layout:fixed;margin:10px 0 26px}.detail-table{font-size:13px}.detail-table th,.detail-table td{padding:9px 6px}.detail-table th:nth-child(n),.detail-table td:nth-child(n){width:auto}th,td{text-align:left;padding:13px 12px;border-bottom:1px solid #e5eaf0;overflow-wrap:anywhere}th{background:#f3f6fa;color:#4b5563}th:nth-child(1),td:nth-child(1){width:16%}th:nth-child(2),td:nth-child(2){width:25%}th:nth-child(3),td:nth-child(3){width:25%}th:nth-child(4),td:nth-child(4){width:34%;white-space:normal}.ok{color:#147a43;font-weight:600}.bad{color:#a5281b;font-weight:600}.business-pending{color:#855d00;font-weight:600}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{background:#f7f9fc;border:1px solid #e4e9f0;border-radius:10px;padding:14px}.card b{display:block;font-size:20px;margin-top:5px}@media(max-width:700px){body{padding:12px}main{padding:18px}.cards{grid-template-columns:1fr}th,td{padding:10px 7px;font-size:13px}th:nth-child(2),td:nth-child(2){width:23%}th:nth-child(3),td:nth-child(3){width:25%}th:nth-child(4),td:nth-child(4){width:36%}}
 </style>
-<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>每日生产产品明细</h2><p class="muted">最近显示3天；A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div id="overview"></div><p class="muted">页面每 30 秒自动刷新；GitHub 更新并完成 Cloudflare 自动构建后，刷新即可显示最新台账。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
+<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>每日生产产品明细</h2><p class="muted">最近显示3天；A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div id="overview"></div><p class="muted">页面每 30 秒刷新台账快照；GitHub 更新并完成 Cloudflare 自动构建后显示最新数据。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
 <script>
+let md=window.__LEDGER__||'';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cn=t=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(t).replaceAll('/','-');
 function shiftFor(date,person){
@@ -27,13 +28,13 @@ function syncRowsFromLedger(){
 }
 function renderAlerts(stamp,syncRows){
   const alerts=[];
-  const syncSection=(md.match(/### 同步状态([\s\S]*?)(?=### 异常检查|$)/)||[])[1]||'';
   const checkSection=(md.match(/### 异常检查([\s\S]*?)(?=\n## |\n<a id=|$)/)||[])[1]||'';
   const pending=Number((checkSection.match(/\|\s*待核实日期\s*\|\s*(\d+)/)||[])[1]||0);
   const conflicts=Number((checkSection.match(/\|\s*状态冲突\s*\|\s*(\d+)/)||[])[1]||0);
   const versions=(checkSection.match(/\|\s*三端规则版本\s*\|\s*([^|]+)/)||[])[1]?.trim();
   for(const row of syncRows){
     if(/失败|异常|卡住|阻塞/.test(row.status))alerts.push({kind:'error',text:`异常告警：${row.source}：${row.status}。`});
+    else if(row.source==='飞书'&&/等待核实/.test(row.status))alerts.push({kind:'warn',text:`业务待处理：飞书${row.status}；同步链路正常。`});
     else if(/处理中|等待|待核实|待同步/.test(row.status))alerts.push({kind:'warn',text:`状态提示：${row.source}：${row.status}。`});
   }
   if(conflicts>0)alerts.push({kind:'error',text:`异常告警：发现${conflicts}条状态冲突。`});
@@ -46,7 +47,7 @@ function renderAlerts(stamp,syncRows){
   }else alerts.push({kind:'error',text:'异常告警：没有读取到台账最后同步时间。'});
   document.querySelector('#alerts').innerHTML=alerts.length?alerts.map(a=>`<div class="alert ${a.kind}">${esc(a.text)}</div>`).join(''):'<div class="alert ok">✓ 当前没有发现异常</div>';
 }
-async function refresh(){
+function refresh(){
   const now=new Date();
   try{
     if(!md)throw Error('台账内容未嵌入');
@@ -58,10 +59,11 @@ async function refresh(){
     const defaults=[['GitHub','V1.17'],['OpenClaw','V1.17 / S1'],['飞书','V1.17 / CARD-INTERACTIVE-1']];
     document.querySelector('#sync').innerHTML=defaults.map(([source,version])=>{
       const row=syncRows.find(item=>item.source===source)||{source,version,status:'未记录',time:stamp};
-      const bad=/失败|异常|卡住|阻塞/.test(row.status), pending=/处理中|等待|待核实|待同步/.test(row.status);
-      const cls=bad?'bad':pending?'':'ok';
-      const icon=bad?'⚠':pending?'⏳':'✓';
-      return `<tr><td>${esc(row.source)}</td><td>${esc(row.version||version)}</td><td class="${cls}">${icon} ${esc(row.status)}</td><td>${esc(row.time||stamp)}</td></tr>`;
+      const bad=/失败|异常|卡住|阻塞/.test(row.status), businessPending=row.source==='飞书'&&/等待核实/.test(row.status), pending=/处理中|待同步/.test(row.status);
+      const cls=bad?'bad':businessPending?'business-pending':pending?'':'ok';
+      const icon=bad?'⚠':businessPending?'✓':pending?'⏳':'✓';
+      const status=businessPending?`规则已同步 · ${row.status}`:row.status;
+      return `<tr><td>${esc(row.source)}</td><td>${esc(row.version||version)}</td><td class="${cls}">${icon} ${esc(status)}</td><td>${esc(row.time||stamp)}</td></tr>`;
     }).join('');
     const dateBlocks=[...md.matchAll(/####\s+(20\d{2}-\d{2}-\d{2})([\s\S]*?)(?=\n#{2,}\s|\n<a id=|$)/g)];
     const records=[];
