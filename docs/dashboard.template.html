@@ -12,8 +12,11 @@
 .task-health{margin:-8px 0 18px;padding:10px 14px;border:1px solid #dbe5f0;border-radius:10px;background:#f8fafc;color:#475569;font-size:14px}
 .task-health.ok{background:#eef7f1;border-color:#cce8d5;color:#176b3a}
 .task-health.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}
+.capacity-wrap{overflow:auto;margin:10px 0 26px}.capacity-table{min-width:820px}.capacity-table th,.capacity-table td{font-size:13px;padding:10px 8px}.capacity-table th{white-space:nowrap}.capacity-total{font-weight:700;color:#1f2937}.capacity-note{margin:-12px 0 18px}
+.history-wrap{overflow:auto;margin:10px 0 26px}.history-table{min-width:980px}.history-table th,.history-table td{font-size:13px;padding:9px 7px}.history-table th{white-space:nowrap}.history-total{font-weight:700;color:#1f2937}
+.section-note{margin:-10px 0 16px}.summary-table{min-width:980px}.summary-table th,.summary-table td{font-size:13px;padding:10px 8px}.summary-table th{white-space:nowrap}.summary-total{font-weight:700;color:#1f2937}.subsection{margin:20px 0 8px;font-size:18px}.state-confirmed{color:#147a43;font-weight:600}.state-pending{color:#9a3412;font-weight:600}.state-absent{color:#64748b;font-weight:600}.state-none{color:#94a3b8}.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 14px}.filter-bar label{color:#475569;font-size:14px}.filter-bar select{border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:7px 10px;color:#1f2937}.employee-details{display:grid;gap:10px;margin:10px 0 26px}.employee-details details{border:1px solid #e2e8f0;border-radius:10px;background:#fff;overflow:hidden}.employee-details summary{cursor:pointer;list-style:none;padding:13px 15px;background:#f8fafc;font-weight:700}.employee-details summary::-webkit-details-marker{display:none}.employee-details summary::before{content:'＋';display:inline-block;width:20px;color:#64748b}.employee-details details[open] summary::before{content:'−'}.employee-details .history-wrap{margin:0;padding:0 12px 12px}.month-block{margin:0 0 22px}.month-block:last-child{margin-bottom:0}
 </style>
-<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>每日生产产品明细</h2><p class="muted">最近显示3天；A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div id="overview"></div><p class="muted">页面每 30 秒刷新台账快照；GitHub 更新并完成 Cloudflare 自动构建后显示最新数据。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
+<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>产能总览</h2><p class="muted section-note">统计只按员工和工序分别计算，不把徐超超、梅芳、李鸿玉、张小翠合并。</p><div id="capacity"></div><h2>2026年下半年累计产能</h2><p class="muted section-note">这是当前台账覆盖周期的累计，不把没有数据的上半年当作全年。</p><div id="period-summary"></div><h2>月产能汇总</h2><p class="muted section-note">每个月单独统计产品数量、合计、有效生产天数和出勤状态。</p><div id="monthly-summary"></div><h2>每日生产产能</h2><p class="muted section-note">每天固定按员工展示；明确未上班、待核实和无记录不会被当成0。A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div class="filter-bar"><label for="daily-range">显示范围</label><select id="daily-range"><option value="all">全部日期</option><option value="5">最近5天</option></select><span class="muted">当前数据按日期从新到旧显示</span></div><div id="daily"></div><h2>员工生产明细</h2><p class="muted section-note">按员工分组查看全部日期；数值为“核实”的产品保留原状态，但不计入已确认产能。</p><div id="history"></div><p class="muted">页面每 30 秒刷新台账快照；GitHub/台账更新后由腾讯云 CloudBase 自动发布，刷新即可看到最新数据。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
 <script>
 let md=window.__LEDGER__||'';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -51,7 +54,7 @@ function renderAlerts(stamp,syncRows){
   const syncTime=stamp&&stamp.match(/^(20\d{2}-\d{2}-\d{2})\s+(\d{2}:\d{2}(?::\d{2})?)/);
   if(syncTime){
     const synced=Date.parse(`${syncTime[1]}T${syncTime[2]}+08:00`), age=Date.now()-synced;
-    if(age>15*60*1000&&age<7*24*60*60*1000)alerts.push({kind:'warn',text:'同步可能卡住：台账超过15分钟没有新的成功同步。'});
+    if(age>60*60*1000&&age<7*24*60*60*1000)alerts.push({kind:'warn',text:'台账快照较旧：超过1小时没有新的生产数据。'});
   }else alerts.push({kind:'error',text:'异常告警：没有读取到台账最后同步时间。'});
   document.querySelector('#alerts').innerHTML=alerts.length?alerts.map(a=>`<div class="alert ${a.kind}">${esc(a.text)}</div>`).join(''):'<div class="alert ok">✓ 当前没有发现异常</div>';
 }
@@ -64,6 +67,168 @@ function renderTaskHealth(syncRows){
   }else{
     el.className='task-health ok';
     el.textContent='✓ 当前没有上传失败、回执失败或卡住任务';
+  }
+}
+const PRODUCTS=['棉堆堆袜','冰冰袜','小腿袜','过膝袜','女船袜','男船袜'];
+const DEFAULT_WORKERS=[
+  {code:'A',person:'A｜徐超超',process:'下机'},
+  {code:'B',person:'B｜梅芳',process:'下机'},
+  {code:'C',person:'C｜李鸿玉',process:'烤边'},
+  {code:'D',person:'D｜张小翠',process:'烤边'}
+];
+const numberText=n=>Number(n).toLocaleString('zh-CN');
+function numeric(v){
+  const t=String(v??'').trim().replaceAll(',','');
+  return /^\d+$/.test(t)?Number(t):null;
+}
+function parseWorkers(){
+  const found=[];
+  for(const m of md.matchAll(/###\s*([A-D])组｜([^\n]+)\n\n/g)){
+    const label=m[2].trim();
+    found.push({code:m[1],person:`${m[1]}｜${label.replace(/(下机|烤边)$/,'')}`,process:/烤边$/.test(label)?'烤边':'下机'});
+  }
+  return DEFAULT_WORKERS.map(base=>found.find(item=>item.code===base.code)||base);
+}
+function parseStatusMap(){
+  const map=new Map();
+  const section=(md.match(/### 已确认出勤状态日期([\s\S]*?)(?=\n## |\n<a id=|$)/)||[])[1]||'';
+  for(const line of section.split('\n')){
+    const m=line.match(/\|\s*([^|]+?)\s*\|\s*(20\d{2})年(\d{1,2})月(\d{1,2})日\s*\|\s*([^|]+?)\s*\|/);
+    if(m){
+      const date=`${m[2]}-${String(m[3]).padStart(2,'0')}-${String(m[4]).padStart(2,'0')}`;
+      map.set(`${date}|${m[1].trim()}`,m[5].trim());
+    }
+  }
+  return map;
+}
+function parseRecords(){
+  const recordMap=new Map();
+  const dateBlocks=[...md.matchAll(/####\s+(20\d{2}-\d{2}-\d{2})([\s\S]*?)(?=\n#{2,}\s|\n<a id=|$)/g)];
+  for(const d of dateBlocks){
+    if(!d[2].includes('| 人员 | 工序 |'))continue;
+    for(const r of d[2].matchAll(/\|\s*([^|]+)\s*\|\s*(下机|烤边)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/g)){
+      const rec={date:d[1],person:r[1].trim(),process:r[2],values:r.slice(3).map(x=>x.trim())};
+      const key=`${rec.date}|${rec.person}|${rec.process}`;
+      const old=recordMap.get(key);
+      const score=rec.values.slice(0,6).filter(v=>numeric(v)!==null).length;
+      const oldScore=old?old.values.slice(0,6).filter(v=>numeric(v)!==null).length:-1;
+      if(!old||score>=oldScore)recordMap.set(key,rec);
+    }
+  }
+  return [...recordMap.values()];
+}
+function recordStatus(rec){
+  return rec.values.slice(0,6).some(v=>/核实|待核实|待查/.test(v))?'待核实':'已确认';
+}
+function recordValues(rec){return PRODUCTS.map((_,i)=>numeric(rec.values[i]));}
+function recordSubtotal(rec){
+  const values=recordValues(rec).filter(v=>v!==null);
+  return values.length?values.reduce((a,b)=>a+b,0):null;
+}
+function aggregate(rows){
+  const out={values:Array(PRODUCTS.length).fill(0),days:new Set(),pendingDays:new Set()};
+  for(const rec of rows){
+    const values=recordValues(rec);
+    let hasNumber=false;
+    values.forEach((v,i)=>{if(v!==null){out.values[i]+=v;hasNumber=true;}});
+    if(hasNumber)out.days.add(rec.date);
+    if(recordStatus(rec)==='待核实')out.pendingDays.add(rec.date);
+  }
+  out.total=out.values.reduce((a,b)=>a+b,0);
+  return out;
+}
+function statusLabel(raw){
+  if(!raw)return '无记录';
+  if(/未上班/.test(raw))return '已确认未上班';
+  if(/待查|核实|待处理/.test(raw))return '待核实';
+  return raw;
+}
+function statusHtml(status){
+  const cls=status==='已确认'?'state-confirmed':status==='已确认未上班'?'state-absent':status==='待核实'?'state-pending':'state-none';
+  return `<span class="${cls}">${esc(status)}</span>`;
+}
+function statusFor(statusMap,date,person){return statusLabel(statusMap.get(`${date}|${person}`));}
+function statusCounts(statusMap,person,month){
+  let absent=0,pending=0;
+  for(const [key,raw] of statusMap){
+    const [date,who]=key.split('|');
+    if(who!==person||!date.startsWith(month))continue;
+    if(/未上班/.test(raw))absent++;
+    else if(/待查|核实|待处理/.test(raw))pending++;
+  }
+  return {absent,pending};
+}
+function tableHead(includeProcess=true){
+  return `<thead><tr><th>人员</th>${includeProcess?'<th>工序</th>':''}${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>合计</th><th>有效天数</th><th>状态</th></tr></thead>`;
+}
+function aggregateRow(worker,agg,statusMap,month=''){
+  const counts=statusCounts(statusMap,worker.person,month);
+  const hasDays=agg.days.size>0;
+  const values=PRODUCTS.map((_,i)=>`<td>${hasDays?numberText(agg.values[i]):'—'}</td>`).join('');
+  const meta=`${hasDays?numberText(agg.total):'—'}<br><small>${hasDays?`${agg.days.size}天`:''}${counts.absent?` · 未上班${counts.absent}天`:''}${counts.pending||agg.pendingDays.size?` · 待核实${counts.pending+agg.pendingDays.size}天`:''}</small>`;
+  const state=counts.pending||agg.pendingDays.size?'待核实':hasDays?'已确认':'无记录';
+  return `<tr><td>${esc(worker.person)}</td><td>${esc(worker.process)}</td>${values}<td class="summary-total">${meta}</td><td>${hasDays?numberText(agg.days.size):'—'}</td><td>${statusHtml(state)}</td></tr>`;
+}
+function renderCapacity(workers,records,statusMap){
+  document.querySelector('#capacity').innerHTML=`<div class="cards">${workers.map(worker=>{
+    const agg=aggregate(records.filter(r=>r.person===worker.person),statusMap);
+    const counts=statusCounts(statusMap,worker.person,'');
+    const pending=agg.pendingDays.size+counts.pending;
+    return `<div class="card"><span>${esc(worker.person)} · ${esc(worker.process)}</span><b>${numberText(agg.total)} 双</b><small>有效生产 ${agg.days.size} 天${counts.absent?` · 未上班 ${counts.absent} 天`:''}${pending?` · 待核实 ${pending} 天`:''}</small></div>`;
+  }).join('')}</div>`;
+}
+function renderPeriodSummary(workers,records,statusMap){
+  const rows=workers.map(worker=>aggregateRow(worker,aggregate(records.filter(r=>r.person===worker.person),statusMap),statusMap));
+  document.querySelector('#period-summary').innerHTML=`<div class="history-wrap"><table class="summary-table">${tableHead(true)}<tbody>${rows.join('')}</tbody></table></div>`;
+}
+function monthLabel(month){return `${month.slice(0,4)}年${Number(month.slice(5,7))}月`;}
+function renderMonthlySummary(workers,records,statusMap){
+  const months=['2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  document.querySelector('#monthly-summary').innerHTML=months.map(month=>{
+    const rows=workers.map(worker=>aggregateRow(worker,aggregate(records.filter(r=>r.person===worker.person&&r.date.startsWith(month)),statusMap),statusMap,month));
+    return `<div class="month-block"><h3 class="subsection">${monthLabel(month)}</h3><div class="history-wrap"><table class="summary-table">${tableHead(true)}<tbody>${rows.join('')}</tbody></table></div></div>`;
+  }).join('');
+}
+function makeDailyRows(records,workers,statusMap,dates){
+  const byKey=new Map(records.map(r=>[`${r.date}|${r.person}`,r]));
+  const rows=[];
+  for(const date of dates){
+    for(const worker of workers){
+      const rec=byKey.get(`${date}|${worker.person}`);
+      const rawStatus=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
+      const values=rec?rec.values.slice(0,6):PRODUCTS.map(()=> '—');
+      const subtotal=rec&&recordSubtotal(rec)!==null?numberText(recordSubtotal(rec)):'—';
+      rows.push(`<tr><td>${date}</td><td>${esc(rec?shiftFor(date,worker.person):shiftFor(date,worker.person))}</td><td>${esc(worker.person)}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(rawStatus)}</td></tr>`);
+    }
+  }
+  return rows;
+}
+function renderDaily(records,workers,statusMap){
+  const allDates=[...new Set([...records.map(r=>r.date),...[...statusMap.keys()].map(k=>k.split('|')[0])])].sort().reverse();
+  const range=document.querySelector('#daily-range')?.value||'all';
+  const dates=range==='5'?allDates.slice(0,5):allDates;
+  const rows=makeDailyRows(records,workers,statusMap,dates);
+  document.querySelector('#daily').innerHTML=rows.length?`<div class="history-wrap"><table class="history-table"><thead><tr><th>日期</th><th>班次</th><th>人员</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`:'<p class="muted">暂无每日记录</p>';
+}
+function renderHistory(records,workers,statusMap){
+  const allDates=[...new Set([...records.map(r=>r.date),...[...statusMap.keys()].map(k=>k.split('|')[0])])].sort().reverse();
+  const byKey=new Map(records.map(r=>[`${r.date}|${r.person}`,r]));
+  document.querySelector('#history').innerHTML=`<div class="employee-details">${workers.map(worker=>{
+    const dates=allDates.filter(date=>byKey.has(`${date}|${worker.person}`)||statusMap.has(`${date}|${worker.person}`));
+    const rows=dates.map(date=>{
+      const rec=byKey.get(`${date}|${worker.person}`), state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
+      const values=rec?rec.values.slice(0,6):PRODUCTS.map(()=> '—');
+      const subtotal=rec&&recordSubtotal(rec)!==null?numberText(recordSubtotal(rec)):'—';
+      return `<tr><td>${date}</td><td>${esc(shiftFor(date,worker.person))}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(state)}</td></tr>`;
+    }).join('');
+    return `<details open><summary>${esc(worker.person)} · ${esc(worker.process)}（${dates.length} 条记录）</summary>${rows?`<div class="history-wrap"><table class="history-table"><thead><tr><th>日期</th><th>班次</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">暂无记录</p>'}</details>`;
+  }).join('')}</div>`;
+}
+function bindDailyFilter(){
+  const select=document.querySelector('#daily-range');
+  if(select&&!select.dataset.bound){
+    select.dataset.bound='1';
+    select.addEventListener('change',()=>{if(window.__dashboardContext)renderDaily(window.__dashboardContext.records,window.__dashboardContext.workers,window.__dashboardContext.statusMap);});
   }
 }
 function refresh(){
@@ -88,17 +253,14 @@ function refresh(){
       const status=businessPending?`<div class="status-content"><span class="ok">✓ 同步正常</span><span class="business-pending">${esc(label)}</span></div>`:`<span class="${cls}">${icon} ${esc(row.status)}</span>`;
       return `<tr><td>${esc(row.source)}</td><td>${esc(row.version||version)}</td><td>${status}</td><td>${esc(row.time||stamp)}</td></tr>`;
     }).join('');
-    const dateBlocks=[...md.matchAll(/####\s+(20\d{2}-\d{2}-\d{2})([\s\S]*?)(?=\n#{2,}\s|\n<a id=|$)/g)];
-    const records=[];
-    for(const d of dateBlocks){
-      if(!d[2].includes('| 人员 | 工序 |'))continue;
-      for(const r of d[2].matchAll(/\|\s*([^|]+)\s*\|\s*(下机|烤边)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/g)){
-        records.push({date:d[1],person:r[1].trim(),process:r[2],values:r.slice(3).map(x=>x.trim())});
-      }
-    }
-    const latestDates=[...new Set(records.map(r=>r.date))].sort().reverse().slice(0,3);
-    const makeTable=(title,rows)=>rows.length?`<h3>${title}</h3><div style="overflow:auto"><table class="detail-table"><thead><tr><th>日期</th><th>班次</th><th>人员</th><th>棉堆堆袜</th><th>冰冰袜</th><th>小腿袜</th><th>过膝袜</th><th>女船袜</th><th>男船袜</th><th>小计</th></tr></thead><tbody>${rows.filter(r=>latestDates.includes(r.date)).map(r=>`<tr><td>${r.date}</td><td>${shiftFor(r.date,r.person)}</td><td>${esc(r.person)}</td>${r.values.map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="muted">暂无记录</p>';
-    document.querySelector('#overview').innerHTML=makeTable('下机',records.filter(r=>r.process==='下机'))+makeTable('烤边',records.filter(r=>r.process==='烤边'));
+    const workers=parseWorkers(), statusMap=parseStatusMap(), records=parseRecords();
+    window.__dashboardContext={workers,statusMap,records};
+    renderCapacity(workers,records,statusMap);
+    renderPeriodSummary(workers,records,statusMap);
+    renderMonthlySummary(workers,records,statusMap);
+    renderDaily(records,workers,statusMap);
+    renderHistory(records,workers,statusMap);
+    bindDailyFilter();
   }catch(e){const b=document.querySelector('#banner');b.className='banner error';b.textContent='读取失败：'+e.message;}
 }
 refresh();let seconds=30;setInterval(()=>{seconds--;const el=document.querySelector("#next-refresh");if(el)el.textContent=`下次刷新：${seconds} 秒`;if(seconds<=0)location.reload();},1000);
