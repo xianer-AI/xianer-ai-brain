@@ -3,9 +3,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>袜子生产统计工作台</title>
 <style>
-:root{font:16px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202124;background:#f6f8fb}body{margin:0;padding:28px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #d9e0ea;border-radius:16px;padding:28px;box-shadow:0 8px 24px #1e375a14}h1{margin:0 0 4px;font-size:28px}.sub,.muted{color:#6b7280}.banner{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#eef7f1;border:1px solid #cce8d5;border-radius:10px;padding:12px 16px;margin:22px 0;color:#176b3a}.banner.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}table{border-collapse:collapse;width:100%;table-layout:fixed;margin:10px 0 26px}.detail-table{font-size:13px}.detail-table th,.detail-table td{padding:9px 6px}.detail-table th:nth-child(n),.detail-table td:nth-child(n){width:auto}th,td{text-align:left;padding:13px 12px;border-bottom:1px solid #e5eaf0;overflow-wrap:anywhere}th{background:#f3f6fa;color:#4b5563}th:nth-child(1),td:nth-child(1){width:16%}th:nth-child(2),td:nth-child(2){width:25%}th:nth-child(3),td:nth-child(3){width:25%}th:nth-child(4),td:nth-child(4){width:34%;white-space:normal}.ok{color:#147a43;font-weight:600}.bad{color:#a5281b;font-weight:600}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{background:#f7f9fc;border:1px solid #e4e9f0;border-radius:10px;padding:14px}.card b{display:block;font-size:20px;margin-top:5px}@media(max-width:700px){body{padding:12px}main{padding:18px}.cards{grid-template-columns:1fr}th,td{padding:10px 7px;font-size:13px}th:nth-child(2),td:nth-child(2){width:23%}th:nth-child(3),td:nth-child(3){width:25%}th:nth-child(4),td:nth-child(4){width:36%}}
+:root{font:16px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202124;background:#f6f8fb}body{margin:0;padding:28px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #d9e0ea;border-radius:16px;padding:28px;box-shadow:0 8px 24px #1e375a14}h1{margin:0 0 4px;font-size:28px}.sub,.muted{color:#6b7280}.banner{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#eef7f1;border:1px solid #cce8d5;border-radius:10px;padding:12px 16px;margin:22px 0;color:#176b3a}.banner.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}.alert-stack{display:grid;gap:8px;margin:-8px 0 18px}.alert{border:1px solid;border-radius:10px;padding:10px 14px}.alert.ok{background:#eef7f1;border-color:#cce8d5;color:#176b3a}.alert.warn{background:#fff9e8;border-color:#f0d890;color:#855d00}.alert.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}table{border-collapse:collapse;width:100%;table-layout:fixed;margin:10px 0 26px}.detail-table{font-size:13px}.detail-table th,.detail-table td{padding:9px 6px}.detail-table th:nth-child(n),.detail-table td:nth-child(n){width:auto}th,td{text-align:left;padding:13px 12px;border-bottom:1px solid #e5eaf0;overflow-wrap:anywhere}th{background:#f3f6fa;color:#4b5563}th:nth-child(1),td:nth-child(1){width:16%}th:nth-child(2),td:nth-child(2){width:25%}th:nth-child(3),td:nth-child(3){width:25%}th:nth-child(4),td:nth-child(4){width:34%;white-space:normal}.ok{color:#147a43;font-weight:600}.bad{color:#a5281b;font-weight:600}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{background:#f7f9fc;border:1px solid #e4e9f0;border-radius:10px;padding:14px}.card b{display:block;font-size:20px;margin-top:5px}@media(max-width:700px){body{padding:12px}main{padding:18px}.cards{grid-template-columns:1fr}th,td{padding:10px 7px;font-size:13px}th:nth-child(2),td:nth-child(2){width:23%}th:nth-child(3),td:nth-child(3){width:25%}th:nth-child(4),td:nth-child(4){width:36%}}
 </style>
-<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>每日生产产品明细</h2><p class="muted">最近显示3天；A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div id="overview"></div><p class="muted">页面每 30 秒自动刷新；GitHub 更新并完成 Cloudflare 自动构建后，刷新即可显示最新台账。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
+<main><h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div><div id="banner" class="banner">正在读取最新状态…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><table><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><h2>每日生产产品明细</h2><p class="muted">最近显示3天；A/B每月1日、16日换班，白班07:00–19:00，夜班19:00–次日07:00。</p><div id="overview"></div><p class="muted">页面每 30 秒自动刷新；GitHub 更新并完成 Cloudflare 自动构建后，刷新即可显示最新台账。 <span id="next-refresh">下次刷新：30 秒</span></p></main>
 <script>
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cn=t=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(t).replaceAll('/','-');
@@ -17,6 +17,24 @@ function shiftFor(date,person){
   const isDay=isA?aIsDay:!aIsDay;
   return isDay?'白班':'夜班';
 }
+function renderAlerts(stamp){
+  const alerts=[];
+  const syncSection=(md.match(/### 同步状态([\s\S]*?)(?=### 异常检查|$)/)||[])[1]||'';
+  const checkSection=(md.match(/### 异常检查([\s\S]*?)(?=\n## |\n<a id=|$)/)||[])[1]||'';
+  const pending=Number((checkSection.match(/\|\s*待核实日期\s*\|\s*(\d+)/)||[])[1]||0);
+  const conflicts=Number((checkSection.match(/\|\s*状态冲突\s*\|\s*(\d+)/)||[])[1]||0);
+  const versions=(checkSection.match(/\|\s*三端规则版本\s*\|\s*([^|]+)/)||[])[1]?.trim();
+  if(/上传失败|回执待补|待同步|异常/.test(syncSection))alerts.push({kind:'error',text:'异常告警：同步状态中发现失败或待处理项，请查看飞书状态或运行日志。'});
+  if(conflicts>0)alerts.push({kind:'error',text:`异常告警：发现${conflicts}条状态冲突。`});
+  if(pending>0)alerts.push({kind:'warn',text:`待核实：还有${pending}天生产记录等待核对。`});
+  if(versions&&versions!=='一致')alerts.push({kind:'error',text:`版本告警：三端规则版本${versions}。`});
+  const syncTime=stamp&&stamp.match(/^(20\d{2}-\d{2}-\d{2})\s+(\d{2}:\d{2}(?::\d{2})?)/);
+  if(syncTime){
+    const synced=Date.parse(`${syncTime[1]}T${syncTime[2]}+08:00`), age=Date.now()-synced;
+    if(age>15*60*1000&&age<7*24*60*60*1000)alerts.push({kind:'warn',text:'同步可能卡住：台账超过15分钟没有新的成功同步。'});
+  }else alerts.push({kind:'error',text:'异常告警：没有读取到台账最后同步时间。'});
+  document.querySelector('#alerts').innerHTML=alerts.length?alerts.map(a=>`<div class="alert ${a.kind}">${esc(a.text)}</div>`).join(''):'<div class="alert ok">✓ 当前没有发现异常</div>';
+}
 async function refresh(){
   const now=new Date();
   try{
@@ -24,6 +42,7 @@ async function refresh(){
     const stamp=(md.match(/最后同步\s*\|\s*([^|]+)/)||[])[1]?.trim()||'台账未记录';
     document.querySelector('#banner').className='banner';
     document.querySelector('#banner').innerHTML=`<strong>● 数据同步正常</strong><span>页面最后刷新：${esc(cn(now))}</span>`;
+    renderAlerts(stamp);
     document.querySelector('#sync').innerHTML=`<tr><td>GitHub</td><td>V1.17</td><td class="ok">✓ 台账已嵌入</td><td>${esc(stamp)}</td></tr><tr><td>OpenClaw</td><td>V1.17 / S1</td><td class="ok">✓ 工作台运行中</td><td>${esc(stamp)}</td></tr><tr><td>飞书</td><td>V1.17 / CARD-INTERACTIVE-1</td><td class="ok">✓ 最新台账已同步</td><td>${esc(stamp)}</td></tr>`;
     const dateBlocks=[...md.matchAll(/####\s+(20\d{2}-\d{2}-\d{2})([\s\S]*?)(?=\n#{2,}\s|\n<a id=|$)/g)];
     const records=[];
