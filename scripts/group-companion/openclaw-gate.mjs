@@ -29,7 +29,7 @@ export async function gate(event,ctx,route=lookup,api=null,status=runStatus){
   return {handled:true,text:'当前不支持 /new 命令。请直接发送生产数量，或回复“准确”确认当前核对卡。'};
  }
  if (looksLikeReport(content)) {
-  return {handled:true,text:'已收到这批生产数据，系统正在生成核对清单；历史批次状态不会影响本批处理。'};
+  return {handled:true,text:'收到，辛苦了！这批生产数据正在生成核对清单；历史批次状态不会影响本批处理。'};
  }
  if (isStatusRequest(content) && !looksLikeReport(content)) {
   try {
@@ -94,7 +94,7 @@ export async function gate(event,ctx,route=lookup,api=null,status=runStatus){
     }
    });
    try{await markUploadDispatchStarted({confirmation:confirmationId,pid});}catch{}
-   return {handled:true,text:'已收到“准确”，正在处理这批生产数据；上传完成后会返回 GitHub commit 和回读结果。'};
+   return {handled:true,text:'收到“准确”，辛苦了！正在处理这批生产数据；上传完成后会返回 GitHub commit 和回读结果。'};
   }catch(error){
    const detail=String(error?.stderr||error?.message||error||'未知错误');
    if(bound){
@@ -167,7 +167,7 @@ export async function cardAction(event,ctx,run){
  try{
   const result=await run({text,id:event.messageId||ctx.messageId,sender:event.senderId||ctx.senderId,group:GROUP});
   if(result.action==='confirm')return; // Native model receives authenticated click; guard validates persisted receipt.
-  return {handled:true,text:result.action==='modify'?'这批先不上传。请发送更正后的完整数量，我会重新给你核对。':'这批已暂缓上传，需要时再重新核对。'};
+  return {handled:true,text:result.action==='modify'?'收到更正，谢谢说明！这批先不上传，请发送更正后的完整数量，我会重新给你核对。':'收到，谢谢说明！这批已暂缓上传，需要时再重新核对。'};
  }catch{return {handled:true,text:'旧核对按钮已停用。请直接回复“准确”，或回复“修改数量”并写出正确数量。'};}
 }
 export function backfillChoice(event,ctx){
