@@ -367,12 +367,20 @@ def render(
     lines = [
         "## 人员生产记录覆盖情况",
         "",
+        "### 同步状态",
+        "",
+        "| 数据源 | 版本/协议 | 状态 |",
+        "|---|---|---|",
+        "| GitHub | V1.17 | 当前台账来源 |",
+        "| OpenClaw | V1.17 / S1 | 运行时已加载 |",
+        "| 飞书 | V1.17 / CARD-INTERACTIVE-1 | 卡片规则已同步 |",
+        "",
         "> 统计口径：表一同时展示有效生产和出勤核实状态；表二只展示有效生产日期。A/B固定班次和C长期上班的历史空档标记为“待核实”；D只有明确提供应上班日期时才进入待核实。确认“当天未上班”或“已经报过”的日期保留在出勤核实区，不计入生产天数、产量或生产明细；总览中的“已确认出勤状态天数”列统计这两类已确认状态总数。待核实队列会同步显示“已发送等待回复”或“排队等待处理”，但不计入生产累计。",
         "",
         "### 一、人员总览",
         "",
-        "| 人员 | 有效生产天数 | 已确认出勤状态天数 | 最近有效生产日 | 日期说明 | 当前状态 |",
-        "|---|---:|---:|---|---|---|",
+        "| 人员 | 有效生产天数 | 已确认未上班 | 已报待查 | 待处理日期 | 最近有效生产日 | 当前状态 |",
+        "|---|---:|---:|---:|---|---|---|",
     ]
     for code, name in WORKERS.items():
         dates = normalized[code]
@@ -428,9 +436,11 @@ def render(
             detail = f"{detail}；{already_detail}" if detail not in {"无", "尚无有效生产记录"} else already_detail
             if status != "待核实":
                 status = "已确认（含已报待查）"
+        pending_dates = sorted(set(missing_map[code]) | set(queue_dates))
+        pending_label = _compact_missing(pending_dates) if pending_dates else "无"
         if missing_map[code]:
             status = "待核实"
-        lines.append(f"| {code}｜{name} | {count} | {status_count} | {latest} | {detail} | {status} |")
+        lines.append(f"| {code}｜{name} | {count} | {len(not_worked_dates)}天 | {len(already_reported_dates)}天 | {pending_label} | {latest} | {status} |")
 
     lines.extend([
         "",

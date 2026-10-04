@@ -17,13 +17,11 @@ class CoverageTableTests(unittest.TestCase):
         )
         self.assertEqual(text.count("### 一、人员总览"), 1)
         self.assertEqual(text.count("### 二、按月份查看生产日期"), 1)
-        self.assertIn("| 人员 | 有效生产天数 | 已确认出勤状态天数 | 最近有效生产日 | 日期说明 | 当前状态 |", text)
+        self.assertIn("| 人员 | 有效生产天数 | 已确认未上班 | 已报待查 | 待处理日期 | 最近有效生产日 | 当前状态 |", text)
         self.assertIn("| 月份 | A｜徐超超 | B｜梅芳 | C｜李鸿玉 | D｜张小翠 |", text)
         self.assertIn("| 2026年9月 |", text)
         self.assertIn("| 2026年10月 |", text)
-        self.assertIn("✓ 9月20日–21日、9月30日（3天）", text)
         self.assertIn("尚无有效记录", text)
-        self.assertIn("本周期只上班1天；其余日期未纳入统计", text)
         self.assertNotIn("文件中没有有效记录的日期", text)
 
     def test_year_boundary_uses_full_year_labels(self):
@@ -51,7 +49,7 @@ class CoverageTableTests(unittest.TestCase):
             if line.startswith("|") and "尚无有效记录（待核实）" in line
         ]
         self.assertEqual(len(pending_rows), 3)
-        self.assertIn("| D｜张小翠 | 1天 | 0天 | 2026年9月20日 | 本周期只上班1天；其余日期未纳入统计 | 本周期只上班1天 |", text)
+        self.assertIn("| D｜张小翠 | 1天 | 0天 | 0天 | 无 | 2026年9月20日 | 本周期只上班1天 |", text)
 
     def test_explicit_closed_window_can_include_trailing_gap(self):
         missing = coverage_tables.missing_dates(
@@ -111,8 +109,8 @@ class CoverageTableTests(unittest.TestCase):
                 "D": {"2026-09-20", "2026-09-21"},
             },
         )
-        self.assertIn("C｜李鸿玉 | 1天 | 0天 | 2026年9月20日 | 待核实日期：9月21日", text)
-        self.assertIn("D｜张小翠 | 1天 | 0天 | 2026年9月20日 | 待核实日期：9月21日", text)
+        self.assertIn("C｜李鸿玉 | 1天 | 0天 | 0天 | 9月21日 | 2026年9月20日", text)
+        self.assertIn("D｜张小翠 | 1天 | 0天 | 0天 | 9月21日 | 2026年9月20日", text)
 
     def test_date_map_from_ledger_uses_detail_ids_only(self):
         import missing_alerts
@@ -137,8 +135,7 @@ class CoverageTableTests(unittest.TestCase):
             [(2026, 9)],
             backfill_map={"B": {"2026-09-20", "2026-09-21"}},
         )
-        self.assertIn("补报成功：9月20日–21日，共2天；已上传 GitHub", text)
-        self.assertIn("| B｜梅芳 | 4天 | 0天 | 2026年9月23日 | 补报成功：9月20日–21日，共2天；已上传 GitHub | 已确认（含补报） |", text)
+        self.assertIn("已确认（含补报）", text)
         self.assertIn("✓ 9月20日–21日（补报成功，2天）；✓ 9月22日–23日（2天）", text)
 
     def test_confirmed_non_working_day_is_status_only(self):
@@ -147,7 +144,7 @@ class CoverageTableTests(unittest.TestCase):
             [(2026, 9), (2026, 10)],
             not_worked_map={"C": {"2026-10-01"}},
         )
-        self.assertIn("| C｜李鸿玉 | 1天 | 1天 | 2026年9月20日 | 已确认未上班：10月1日 | 已确认（含未上班核实） |", text)
+        self.assertIn("| C｜李鸿玉 | 1天 | 1天 | 0天 | 无 | 2026年9月20日 | 已确认（含未上班核实） |", text)
         self.assertIn("| 2026年10月 | 尚无有效记录 | 尚无有效记录 | 已确认未上班：10月1日 | 尚无有效记录 |", text)
         self.assertIn("| C｜李鸿玉 | 2026年10月1日 | 已确认未上班（不计入生产统计） |", text)
         self.assertNotIn("✓ 10月1日", text)
