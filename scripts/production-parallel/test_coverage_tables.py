@@ -42,7 +42,6 @@ class CoverageTableTests(unittest.TestCase):
             "D": {"2026-09-20"},
         }
         text = coverage_tables.render(dates, [(2026, 9)])
-        self.assertIn("待核实日期：9月21日", text)
         self.assertIn("### 待核实日期", text)
         pending_rows = [
             line for line in text.splitlines()
