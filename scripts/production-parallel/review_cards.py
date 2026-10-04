@@ -511,6 +511,14 @@ def deliver_card(db, token, is_resend=False):
                     'uuid':row['token']})
   message_id=((response.get('data') or {}).get('message_id') if isinstance(response,dict) else None)
   if not message_id: raise RuntimeError('飞书未返回消息ID')
+  # Feishu's "export messages to document" view cannot serialize interactive
+  # cards and renders them as [卡片消息].  Status cards are read-only reports,
+  # so also emit a plain-text mirror that remains searchable and printable.
+  if row.get('card_kind') == 'status':
+   request('xiaowen','POST','/im/v1/messages?receive_id_type=chat_id',
+           {'receive_id':row['grp'],'msg_type':'text',
+            'content':json.dumps({'text':row['summary']},ensure_ascii=False),
+            'uuid':row['token']+'-printable'})
  except urllib.error.HTTPError as exc:
   detail=f'Feishu HTTP {exc.code}: {exc.reason}'
   mark_card_delivery_failed(db, token, detail)
