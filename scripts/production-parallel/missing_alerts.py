@@ -284,6 +284,21 @@ def refresh_status_snapshot(db: str = DEFAULT_DB, *, now: dt.datetime | None = N
     return snapshot
 
 
+def review_status_section(db: str, year: int) -> str:
+    """Publish only display fields from active cards; never expose callback tokens."""
+    import sqlite3, re
+    rows = []
+    with sqlite3.connect(f'file:{db}?mode=ro', uri=True) as conn:
+        for summary, delivery in conn.execute("SELECT summary, delivery FROM review_cards WHERE state='pending' AND card_kind='production'"):
+            person = re.search(r'身份：([A-D])=([^\s]+)', summary or '')
+            date = re.search(r'生产日：(20\d{2}-\d{2}-\d{2})', summary or '')
+            if not person or not date or not date[1].startswith(str(year)): continue
+            products = re.findall(r'^(棉堆堆袜|冰冰袜|小腿袜|过膝袜|女船袜|男船袜)：', summary, re.M)
+            state = '核对卡已发送，等待回复' if delivery == 'sent' else '核对卡待发送'
+            rows.append(f'| {person[1]}｜{person[2]} | {date[1]} | {state} | {"、".join(products)} |')
+    return '\n### 核对卡业务状态\n\n| 人员 | 生产日期 | 业务状态 | 产品 |\n|---|---|---|---|\n' + ('\n'.join(sorted(set(rows))) if rows else '| — | — | 当前无待回复核对卡 | — |') + '\n'
+
+
 def sync_pending_queue_to_github(
     db: str = DEFAULT_DB, *, now: dt.datetime | None = None,
 ) -> list[dict[str, str]]:
@@ -349,6 +364,10 @@ def sync_pending_queue_to_github(
                 platform_status=platform_status,
                 sync_time=sync_time,
             )
+            import re
+            candidate = re.sub(r'\n### 核对卡业务状态\n[\s\S]*?(?=\n#{2,} |\n<a id=|$)', '', candidate)
+            marker = '\n### 异常检查'
+            candidate = candidate.replace(marker, review_status_section(db, year) + marker, 1)
             coverage_tables.validate_status_exclusivity(candidate)
             if candidate == before:
                 results.append({'year': str(year), 'status': 'unchanged'})
