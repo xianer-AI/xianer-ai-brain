@@ -179,10 +179,8 @@ function summaryCards(workers,records,statusMap,month=''){
     const agg=aggregate(records.filter(r=>r.person===worker.person&&r.date.startsWith(month)));
     const counts=statusCounts(statusMap,worker.person,month), hasData=agg.days.size>0;
     const pending=agg.pendingDays.size+counts.pending;
-    const pendingDates=[...new Set([
-      ...agg.pendingDays,
-      ...[...statusMap].filter(([key,raw])=>key.split('|')[1]===worker.person&&key.split('|')[0].startsWith(month)&&/待查|核实|待处理/.test(raw)).map(([key])=>key.split('|')[0])
-    ])].sort();
+    const allAgg=aggregate(records.filter(r=>r.person===worker.person));
+    const pendingDates=pendingDatesForWorker(worker,allAgg,statusMap);
     const state=pending?'待核实':hasData?'已确认':'无记录';
     const pendingText=pending?`<span class="pending-dates">待核实 ${pending} 天：${pendingDates.join('、')}</span>`:'';
     return `<article class="product-card"><header class="product-card-header"><span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span></header><div class="product-card-total"><span>已确认累计</span><strong>${hasData?numberText(agg.total):'—'}<small>双</small></strong></div>${productGrid(hasData?agg.values:PRODUCTS.map(()=>'—'))}<footer class="product-card-footer"><span>${hasData?`有效生产 ${agg.days.size} 天`:'暂无生产数量'}${counts.absent?` · 未上班 ${counts.absent} 天`:''}${pending?` · 待核实 ${pending} 天`:''}${pendingText}</span>${statusHtml(state)}</footer></article>`;
@@ -207,6 +205,11 @@ function prepareFilters(workers,records){
 
 function tableHead(includeProcess=true){
   return `<thead><tr><th>人员</th>${includeProcess?'<th>工序</th>':''}${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>合计</th><th>有效天数</th><th>状态</th></tr></thead>`;
+}
+function pendingDatesForWorker(worker,agg,statusMap,month=''){
+  const dates=new Set(agg.pendingDays);
+  for(const [key,raw] of statusMap){const [date,person]=key.split('|');if(person===worker.person&&(!month||date.startsWith(month))&&/待查|核实|待处理/.test(raw))dates.add(date);}
+  return [...dates].sort();
 }
 function pendingDates(worker,agg,statusMap,month=''){
   const dates=new Set();
