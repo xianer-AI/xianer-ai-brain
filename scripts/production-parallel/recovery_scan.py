@@ -3,6 +3,7 @@
 This module only creates durable pending cards. It never confirms or writes GitHub.
 """
 import json
+import re
 import os
 import time
 import secrets
@@ -259,6 +260,12 @@ def scan(db, limit=200):
             record['result'] = json.loads(record['result']) if record['result'] else None
             extracted = (record['result'] or {}).get('extracted') or {}
             if extracted.get('kind') != 'report':
+                continue
+            # Explicit-date partial supplements require a bound merge preview,
+            # never the normal missing-as-zero review path.
+            supplied = {item.get('product') for item in extracted.get('items', [])}
+            explicit_date = bool(re.search(r'20\d{2}[-年/]\d{1,2}[-月/]\d{1,2}', str(record['event'].get('content', ''))))
+            if explicit_date and supplied and supplied != set(PRODUCTS):
                 continue
             # Empty model drafts are not production reports. They used to
             # create noisy all-"核实" cards with a zero subtotal (including
