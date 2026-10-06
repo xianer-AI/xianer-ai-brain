@@ -277,7 +277,7 @@ function renderMonthlyDetail(workers,records,statusMap){
   const selected=code==='all'?workers:workers.filter(w=>w.code===code);
   const dates=[...new Set([...records.filter(r=>r.date.startsWith(month)).map(r=>r.date),...[...statusMap.keys()].map(k=>k.split('|')[0]).filter(d=>d.startsWith(month))])].sort().reverse();
   const byKey=new Map(records.map(r=>[`${r.date}|${r.person}`,r]));
-  const groups=dates.map(date=>`<details class="day-fold"><summary class="day-heading"><span>${date}</span><span>${selected.length}位员工 · 点击查看产品明细</span></summary><section class="day-group">${selected.map(worker=>{const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);return recordCard(worker,rec,state,date);}).join('')}</section></details>`).join('');
+  const groups=dates.map(date=>`<details class="day-fold"><summary class="day-heading"><span>${date}</span><span>点击展开</span></summary><section class="day-group">${selected.map(worker=>{const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);return recordCard(worker,rec,state,date);}).join('')}</section></details>`).join('');
   document.querySelector('#monthly-detail').innerHTML=groups||'<p class="muted">该月份暂无对应明细</p>';
 }
 function makeDailyRows(records,workers,statusMap,dates){
