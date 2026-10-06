@@ -19,12 +19,15 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div>
 <details class="sync-panel" id="sync-panel"><summary><span>三端同步详情</span><span class="sync-caption">GitHub · OpenClaw · 飞书</span></summary><table class="sync-table"><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table></details>
 <h2 id="overview-title">产能总览</h2><p class="muted section-note">按员工和工序分别统计，每个人单独计算。</p><div id="capacity"></div>
-<h2 id="monthly-detail-title">每月生产明细</h2><p class="muted section-note">选择月份和员工，查看该月每天的完整记录；历史补核按日期单独显示。</p><div class="filter-bar"><div class="filter-field"><label for="detail-month">月份</label><select id="detail-month"></select></div><div class="filter-field"><label for="detail-worker">员工</label><select id="detail-worker"><option value="all">全部员工</option></select></div></div><div id="monthly-detail"></div>
-
 <h2 id="daily-title">每日生产产品明细</h2><p class="muted section-note">默认显示最近3个记录日期。未上班、待核实和无记录分别标注，不当作0。</p>
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
 
+
+<h2 id="monthly-detail-title">每月生产明细</h2><p class="muted section-note">选择月份和员工，查看该月每天的完整记录；历史补核按日期单独显示。</p><div class="filter-bar"><div class="filter-field"><label for="detail-month">月份</label><select id="detail-month"></select></div><div class="filter-field"><label for="detail-worker">员工</label><select id="detail-worker"><option value="all">全部员工</option></select></div></div><div id="monthly-detail"></div>
+
+
 <h2 id="monthly-title">月产能汇总</h2><p class="muted section-note">切换月份查看每位员工的产品数量、合计和有效生产天数。</p><div class="filter-bar"><div class="filter-field"><label for="summary-month">统计月份</label><select id="summary-month"></select></div></div><div id="monthly-summary"></div>
+
 
 <h2 id="history-title">员工生产明细</h2><p class="muted section-note">点开员工姓名查看全部历史记录。待核实数量不计入已确认产能。</p><div id="history"></div>
 
@@ -289,10 +292,10 @@ function renderDaily(records,workers,statusMap){
   const selected=code==='all'?workers:workers.filter(w=>w.code===code);
   const rows=makeDailyRows(records,selected,statusMap,dates);
   const byKey=new Map(records.map(r=>[`${r.date}|${r.person}`,r]));
-  const mobile=dates.map(date=>`<section class="day-group"><h3 class="day-heading">${date}<span>${selected.length}位员工 · 分别统计</span></h3>${selected.map(worker=>{
+  const mobile=dates.map(date=>`<details class="day-fold"><summary class="day-heading">${date}<span>${selected.length}位员工 · 点击查看产品明细</span></summary><section class="day-group">${selected.map(worker=>{
     const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
     return recordCard(worker,rec,state);
-  }).join('')}</section>`).join('');
+  }).join('')}</section></details>`).join('');
   document.querySelector('#daily').innerHTML=rows.length?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows.join('')}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无每日记录</p>';
 }
 function renderHistory(records,workers,statusMap){
