@@ -34,6 +34,25 @@ class CoverageTableTests(unittest.TestCase):
         ))
         self.assertIn("| 2027年1月 |", text)
 
+    def test_attendance_explanation_matches_separate_status_columns_in_both_years(self):
+        for year in (2026, 2027):
+            with self.subTest(year=year):
+                text = coverage_tables.render(
+                    {'A': {f'{year}-01-01'}},
+                    [(year, 1)],
+                    attendance_status_map={
+                        'A': {
+                            f'{year}-01-02': 'not_worked',
+                            f'{year}-01-03': 'already_reported',
+                        },
+                    },
+                )
+                self.assertIn('“已确认未上班”和“已报待查”两列分别统计对应的已确认状态天数', text)
+                self.assertNotIn('“已确认出勤状态天数”列', text)
+                self.assertIn(f'| A｜徐超超 | 1天 | 1天 | 1天 | 无 | {year}年1月1日 |', text)
+                self.assertNotIn('✓ 1月2日', text)
+                self.assertNotIn('✓ 1月3日', text)
+
     def test_fixed_rota_gap_is_marked_for_but_not_cd(self):
         dates = {
             "A": {"2026-09-20", "2026-09-22"},

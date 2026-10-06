@@ -187,6 +187,49 @@ assert.equal(localStorage.getItem('production-view-2026-worker'),'A');
 assert.equal(localStorage.getItem('production-view-2027-worker'),'C');
 ''', {'2026': ledger, '2027': ledger})
 
+    def test_mobile_month_pending_dates_stay_with_selected_month_worker_and_year(self):
+        ledger = '''### 已确认出勤状态日期
+| A｜徐超超 | 2026年10月1日 | 已报待查 |
+| A｜徐超超 | 2026年10月2日 | 已报待查 |
+| A｜徐超超 | 2027年1月1日 | 已报待查 |
+| A｜徐超超 | 2027年1月2日 | 已报待查 |
+| A｜徐超超 | 2027年2月2日 | 已报待查 |
+| B｜梅芳 | 2027年1月3日 | 已报待查 |
+## 每日汇总
+#### 2026-10-01
+| 人员 | 工序 | 棉堆堆袜 | 冰冰袜 | 小腿袜 | 过膝袜 | 女船袜 | 男船袜 | 合计 |
+| A｜徐超超 | 下机 | 500 | 100 | 核实 | 0 | 0 | 0 | 600 |
+#### 2027-01-01
+| 人员 | 工序 | 棉堆堆袜 | 冰冰袜 | 小腿袜 | 过膝袜 | 女船袜 | 男船袜 | 合计 |
+| A｜徐超超 | 下机 | 10 | 20 | 核实 | 0 | 0 | 0 | 30 |
+#### 2027-02-01
+| 人员 | 工序 | 棉堆堆袜 | 冰冰袜 | 小腿袜 | 过膝袜 | 女船袜 | 男船袜 | 合计 |
+| A｜徐超超 | 下机 | 100 | 200 | 核实 | 0 | 0 | 0 | 300 |
+'''
+        self.annual_browser('''
+const worker=DEFAULT_WORKERS[0];
+const records=parseRecords(),statusMap=parseStatusMap();
+const january=summaryCards([worker],records,statusMap,'2027-01');
+assert.match(january,/待核实 2 天：2027-01-01、2027-01-02/);
+assert.doesNotMatch(january,/2027-02-|2026-|2027-01-03/);
+const february=summaryCards([worker],records,statusMap,'2027-02');
+assert.match(february,/待核实 2 天：2027-02-01、2027-02-02/);
+assert.doesNotMatch(february,/2027-01-|2026-/);
+const annual=summaryCards([worker],records,statusMap);
+assert.match(annual,/待核实 4 天：/);
+for(const date of ['2027-01-01','2027-01-02','2027-02-01','2027-02-02'])assert.ok(annual.includes(date));
+assert.doesNotMatch(annual,/2026-|2027-01-03/);
+const capacity={innerHTML:''};
+const document={querySelector(selector){assert.equal(selector,'#capacity');return capacity;}};
+renderCapacity([worker],records,statusMap);
+assert.match(capacity.innerHTML,/待核实 4 天/);
+assert.match(capacity.innerHTML,/330 双/);
+activeYear='2026';md=annualLedgers['2026'];
+const previousYear=summaryCards([worker],parseRecords(),parseStatusMap(),'2026-10');
+assert.match(previousYear,/待核实 2 天：2026-10-01、2026-10-02/);
+assert.doesNotMatch(previousYear,/2027-/);
+''', {'2026': ledger, '2027': ledger})
+
     def test_sync_banner_requires_evidence_and_matching_versions(self):
         template = build.TEMPLATE.read_text()
         pure = template.split('function snapshotSyncState', 1)[1].split('function renderSyncBanner', 1)[0]

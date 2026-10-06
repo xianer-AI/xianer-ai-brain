@@ -8,6 +8,15 @@ import backfill_flow
 
 
 class BackfillRuleTests(unittest.TestCase):
+    def bind_fixture(self, db, worker='B', sender='sender'):
+        import queue_store
+        import worker_identity
+        worker_identity.init(str(db))
+        with queue_store.conn(str(db)) as conn:
+            conn.execute('INSERT INTO worker_identity VALUES(?,?,?,?,?,?)',
+                         (worker, worker_identity.NAMES[worker], sender,
+                          'isolated fixture', 'verified sender fixture', 0))
+
     def test_card_has_only_three_choices(self):
         card = backfill_flow.verification_card("B", "2026-09-20")
         content = card["elements"][0]["text"]["content"]
@@ -51,6 +60,7 @@ class BackfillRuleTests(unittest.TestCase):
                          "verification_sent", 1, 1),
                     )
                 if number == "3":
+                    self.bind_fixture(db)
                     with patch.object(backfill_flow, "_send", return_value="om_template"):
                         result = backfill_flow.handle_choice("card-action-x", "sender", "生产补报 3 B 2026-09-20", db=db)
                 else:
@@ -70,6 +80,7 @@ class BackfillRuleTests(unittest.TestCase):
                     ("B:2026-09-20:V1.17", "B", "2026-09-20", backfill_flow.GROUP,
                      "verification_sent", 1, 1),
                 )
+            self.bind_fixture(db)
             with patch.object(backfill_flow, "_send", return_value="om_template") as send:
                 # Some Feishu clients send only the visible label and a
                 # synthetic callback id.  It must still route deterministically.

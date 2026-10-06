@@ -329,6 +329,25 @@ def _find_request(message_id: str, worker: str | None, day: str | None, db: str 
     return None
 
 
+def _verified_target_sender(worker: str, sender: str, db: str | Path) -> str:
+    """Authorize the bound employee account or the verified owner proxy."""
+    import queue_store as q
+    import review_cards
+    import worker_identity
+
+    queue_db = str(PRIMARY_DB if Path(db).resolve() == DB.resolve() else Path(db).resolve())
+    worker_identity.init(queue_db)
+    with q.conn(queue_db) as conn:
+        identity = conn.execute('SELECT platform FROM worker_identity WHERE worker=?',
+                                (worker,)).fetchone()
+    if not identity or not identity['platform']:
+        raise RuntimeError('目标员工账号尚未核实，请先完成账号绑定后操作日期卡。')
+    target_sender = identity['platform']
+    if sender not in (target_sender, review_cards.OWNER):
+        raise RuntimeError('操作账号与目标员工的已核实账号不匹配，请回复自己的日期卡。')
+    return target_sender
+
+
 def handle_choice(message_id: str, sender: str, content: str, db: str | Path = DB) -> dict | None:
     """Handle a numeric/text choice replied to a verification card."""
     text = str(content or "").strip()
@@ -354,6 +373,11 @@ def handle_choice(message_id: str, sender: str, content: str, db: str | Path = D
     worker, day = row[1], row[2]
     if row[6] in {"uploaded", "superseded"}:
         return {"handled": True, "text": f"{day} 已完成处理，旧核实卡不会重复上传。"}
+    if number == '3':
+        try:
+            _verified_target_sender(worker, sender, db)
+        except RuntimeError as exc:
+            return {'handled': True, 'text': str(exc)}
     if row[6] in {"not_worked_review_sent", "already_reported_review_sent"} and row[5]:
         if not _message_is_deleted(row[5]):
             return {"handled": True, "text": f"已生成{CHOICES[number]}核对卡，请回复“准确”后同步 GitHub。", "message_id": row[5]}
@@ -413,15 +437,7 @@ def _create_status_review(worker: str, day: str, sender: str, status: str,
     # bound to the target employee's verified Feishu account so that the
     # employee's later “准确” is accepted.  Only the owner may act as this
     # proxy; an unrelated account is rejected by the normal identity guard.
-    target_sender = sender
-    with q.conn(str(PRIMARY_DB if Path(db).resolve() == DB.resolve() else Path(db).resolve())) as conn:
-        identity = conn.execute('SELECT platform FROM worker_identity WHERE worker=?', (worker,)).fetchone()
-    if identity:
-        target_sender = identity['platform'] if hasattr(identity, 'keys') else identity[0]
-    if target_sender != sender:
-        import review_cards as _review_cards
-        if sender != _review_cards.OWNER:
-            raise RuntimeError('点击账号与目标员工身份不匹配')
+    target_sender = _verified_target_sender(worker, sender, db)
     # upload_task validates source IDs as Feishu-style ``om_`` IDs.  Keep the
     # synthetic status batch deterministic and bind its identity to the target
     # employee, never to the account that happened to click the card.  This

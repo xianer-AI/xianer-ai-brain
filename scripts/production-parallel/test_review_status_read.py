@@ -61,6 +61,50 @@ class ReviewStatusReadTests(unittest.TestCase):
         with self.assertRaises(sqlite3.ProgrammingError):
             opened[0].execute('SELECT 1')
 
+    def test_existing_wal_snapshot_is_readable_but_reader_cannot_change_business_rows(self):
+        original = sqlite3.connect
+        writer = original(self.db)
+        checks = []
+        test = self
+
+        class GuardedConnection(sqlite3.Connection):
+            def execute(self, statement, parameters=()):
+                if statement.startswith('SELECT summary, delivery'):
+                    test.assertEqual(super().execute('PRAGMA query_only').fetchone()[0], 1)
+                    with test.assertRaisesRegex(sqlite3.OperationalError, 'readonly'):
+                        super().execute("UPDATE review_cards SET delivery='changed'")
+                    checks.append(self.total_changes)
+                return super().execute(statement, parameters)
+
+        def tracked_connect(*args, **kwargs):
+            return original(*args, factory=GuardedConnection, **kwargs)
+
+        try:
+            self.assertEqual(writer.execute('PRAGMA journal_mode=WAL').fetchone()[0], 'wal')
+            # Leave a committed change in the active writer's WAL, so an
+            # immutable/stale read would miss this pending card.
+            writer.execute('INSERT INTO review_cards VALUES(?,?,?,?)',
+                           ('身份：D=张小翠\n生产日：2027-01-03\n冰冰袜：4双',
+                            'sent', 'pending', 'production'))
+            writer.commit()
+            self.assertTrue(Path(str(self.db) + '-wal').exists())
+            with patch.object(missing_alerts.sqlite3, 'connect', side_effect=tracked_connect):
+                rows = missing_alerts._review_status_rows(str(self.db))
+            self.assertTrue(any('2027-01-03' in summary for summary, _ in rows))
+            self.assertEqual(checks, [0])
+            self.assertEqual(writer.execute(
+                "SELECT COUNT(*) FROM review_cards WHERE delivery='changed'"
+            ).fetchone()[0], 0)
+        finally:
+            writer.close()
+
+    def test_missing_database_is_not_created_or_rendered_as_an_empty_queue(self):
+        absent = Path(self.temporary.name) / 'not-created.sqlite'
+        with patch.object(missing_alerts.time, 'sleep'):
+            with self.assertRaisesRegex(RuntimeError, '核对卡状态读取失败'):
+                missing_alerts.review_status_section(str(absent), 2027)
+        self.assertFalse(absent.exists())
+
     def test_open_failure_is_bounded_and_recovers_same_snapshot(self):
         connection = MagicMock()
         connection.execute.return_value.fetchall.return_value = [('summary', 'sent')]
@@ -72,7 +116,7 @@ class ReviewStatusReadTests(unittest.TestCase):
         self.assertEqual(rows, [('summary', 'sent')])
         self.assertEqual(connect.call_count, 3)
         self.assertEqual(connect.call_args,
-                         call(self.db.resolve().as_uri() + '?mode=ro', uri=True, timeout=20))
+                         call(self.db.resolve().as_uri() + '?mode=rw', uri=True, timeout=20))
         self.assertEqual(sleep.call_args_list, [call(.2), call(.5)])
         connection.close.assert_called_once_with()
 

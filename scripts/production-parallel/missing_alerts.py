@@ -128,12 +128,28 @@ def date_map_from_ledger(markdown: str) -> dict[str, set[str]]:
         tail = markdown[start.end():]
         stop = re.search(r'^## ', tail, re.M)
         section = tail[:stop.start()] if stop else tail
-        for match in re.finditer(rf'^\| (20\d{{6}}-{code}-\d{{3}}) \|', section, re.M):
+        for match in re.finditer(
+            rf'^\| (20\d{{6}}-{code}-\d{{3}}) \| [^|]+ \| \d+ \| ([^|]+) \|$',
+            section, re.M,
+        ):
+            # Match the effective-record exclusion used by the ledger writer.
+            if any(marker in match.group(2) for marker in ('撤销', '作废')):
+                continue
             identifier = match.group(1)
             result[code].add(
                 f"{identifier[:4]}-{identifier[4:6]}-{identifier[6:8]}"
             )
     return result
+
+
+def _resolved_dates(markdown: str) -> dict[str, set[str]]:
+    """Production and confirmed attendance both resolve a missing-day check."""
+    from deterministic_upload import _attendance_status_map
+
+    dates = date_map_from_ledger(markdown)
+    for worker, statuses in _attendance_status_map(markdown).items():
+        dates[worker].update(statuses)
+    return dates
 
 
 def build_alerts(
@@ -295,11 +311,14 @@ def _review_status_rows(db: str) -> list[tuple[str, str]]:
     rather than being rendered as an empty business queue.
     """
     database = Path(db).expanduser().resolve()
-    uri = database.as_uri() + '?mode=ro'
+    # Existing-only read/write opening lets SQLite manage rebuilding WAL
+    # sidecars. Query-only still prohibits business writes on this connection.
+    uri = database.as_uri() + '?mode=rw'
     for attempt in range(len(REVIEW_STATUS_READ_DELAYS) + 1):
         connection = None
         try:
             connection = sqlite3.connect(uri, uri=True, timeout=20)
+            connection.execute('PRAGMA query_only=ON')
             return connection.execute(
                 "SELECT summary, delivery FROM review_cards "
                 "WHERE state='pending' AND card_kind='production'"
@@ -515,10 +534,13 @@ def deliver_scheduled_alerts(
     current = now or dt.datetime.now(ZoneInfo('Asia/Shanghai'))
     if current.tzinfo is None:
         current = current.replace(tzinfo=ZoneInfo('Asia/Shanghai'))
+    # Route by the closed production day. On January 1 the due December 31
+    # report still belongs to the previous year's ledger.
+    closed_through = current.date() - dt.timedelta(days=1)
     if ledger_markdown is None:
         try:
             import commit_guard
-            endpoint = commit_guard.endpoint_for_date(current.date().isoformat())
+            endpoint = commit_guard.endpoint_for_date(closed_through.isoformat())
             ledger_markdown = _ledger_snapshot(endpoint)
         except Exception:
             return []
@@ -526,12 +548,15 @@ def deliver_scheduled_alerts(
     # A production date becomes eligible after its next calendar day reaches
     # noon.  This keeps yesterday eligible while never treating today's open
     # date as missing before tomorrow noon.
-    closed_through = current.date() - dt.timedelta(days=1)
     alerts = build_alerts(
         date_map,
         window_end=closed_through,
         now=current,
     )
+    resolved_by_year = {closed_through.year: _resolved_dates(ledger_markdown)}
+    alerts = [alert for alert in alerts
+              if alert['production_date'] not in
+              resolved_by_year[closed_through.year].get(alert['worker'], ())]
     import queue_store as q
     _ensure_delivery_table(db)
     with q.conn(db) as c:
@@ -543,9 +568,22 @@ def deliver_scheduled_alerts(
                  (alert['alert_key'], alert['worker'], alert['production_date'],
                  alert['message'], current.timestamp()),
             )
+        pending_years = {int(row['production_date'][:4]) for row in c.execute(
+            "SELECT production_date FROM scheduled_missing_alerts "
+            "WHERE state IN ('pending','failed','sent')").fetchall()}
+    # Old queued reminders belong to their own production year. Do not
+    # infer that they are still missing from an empty current-year ledger.
+    for year in sorted(pending_years - set(resolved_by_year)):
+        try:
+            import commit_guard
+            endpoint = commit_guard.endpoint_for_date(f'{year}-01-01')
+            resolved_by_year[year] = _resolved_dates(_ledger_snapshot(endpoint))
+        except Exception:
+            # Unknown or unavailable years stay queued without a send.
+            resolved_by_year[year] = None
     refresh_status_snapshot(db, now=current, ledger_markdown=ledger_markdown, alerts=alerts)
-    if not alerts:
-        return []
+    # Durable pending/failed reminders still need recovery when this scan
+    # finds no new gaps, including while the new year's ledger is empty.
     try:
         from transport import request
         import card_builder
@@ -563,7 +601,31 @@ def deliver_scheduled_alerts(
             "ORDER BY worker, production_date"
         ).fetchall()
         active_keys = {alert['alert_key'] for alert in alerts}
+        eligible_keys = set()
         for row in all_rows:
+            resolved = resolved_by_year.get(int(row['production_date'][:4]))
+            if resolved is None:
+                continue
+            if row['production_date'] in resolved.get(row['worker'], ()):
+                if row['state'] in ('pending', 'failed'):
+                    c.execute(
+                        "UPDATE scheduled_missing_alerts SET state='ignored',last_error=? "
+                        "WHERE alert_key=? AND state IN ('pending','failed')",
+                        ('authoritative ledger already resolves this date', row['alert_key']),
+                    )
+                elif row['receipt_confirmed_at']:
+                    c.execute(
+                        "UPDATE scheduled_missing_alerts SET state='completed',last_error=NULL "
+                        "WHERE alert_key=?", (row['alert_key'],),
+                    )
+                # A sent reminder without its success receipt keeps the
+                # sequential queue locked, but cannot be resent for a filled day.
+                continue
+            check_at = alert_schedule.scheduled_check_at(
+                row['worker'], row['production_date'], tzinfo=current.tzinfo)
+            if check_at is not None and current < check_at:
+                continue
+            eligible_keys.add(row['alert_key'])
             # Feishu keeps a recalled message ID resolvable, so the local
             # state alone cannot tell whether the employee still has a card.
             # Treat a confirmed platform deletion as a fresh pending send.
@@ -599,7 +661,8 @@ def deliver_scheduled_alerts(
             # marks the first row completed from the ledger.
             first_by_worker.setdefault(row['worker'], row)
         rows = [row for row in first_by_worker.values()
-                if row['state'] in ('pending', 'failed')]
+                if row['state'] in ('pending', 'failed')
+                and row['alert_key'] in eligible_keys]
         for row in rows:
             key = row['alert_key']
             uuid_key = row['delivery_uuid'] or str(uuid5(key))
