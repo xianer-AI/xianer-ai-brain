@@ -48,15 +48,24 @@ class DeterministicCandidateTests(unittest.TestCase):
         self.assertEqual(report['missing_products'], {'过膝袜'})
 
     def test_missing_products_build_a_guard_valid_candidate(self):
-        report = dict(self.report, production_date='2026-10-03')
+        # A fixed empty template keeps this provenance test independent of
+        # later real production dates.  Cumulative labels use the latest
+        # recorded date, so asserting an older date on the live ledger drifts.
+        template = Path(__file__).with_name('templates') / '2027全年下机白胚半成品统计.md'
+        before = template.read_text(encoding='utf-8')
+        report = dict(self.report, production_date='2027-01-01')
         report['missing_products'] = {'过膝袜', '男船袜'}
         candidate = uploader.build_candidate(
-            self.before, report,
+            before, report,
             'om_missing_source', 'om_missing_confirmation',
         )
         self.assertIn('原始未报项：过膝袜、男船袜；经员工本人本次“准确”确认按0双写入。', candidate)
-        self.assertIn('| 过膝袜 | 0 | 已确认（含2026-10-03核实为0） |', candidate)
-        self.assertIn('| 男船袜 | 0 | 已确认（含2026-10-03核实为0） |', candidate)
+        self.assertIn('| 过膝袜 | 0 | 已确认（含2027-01-01核实为0） |', candidate)
+        self.assertIn('| 男船袜 | 0 | 已确认（含2027-01-01核实为0） |', candidate)
+        self.assertRegex(candidate, r'(?m)^\| 20270101-C-\d{3} \| 过膝袜 \| 0 \| 已确认 \|$')
+        self.assertRegex(candidate, r'(?m)^\| 20270101-C-\d{3} \| 男船袜 \| 0 \| 已确认 \|$')
+        self.assertIn('来源消息：om_missing_source', candidate)
+        self.assertIn('确认消息：om_missing_confirmation', candidate)
 
     def test_personal_subtotal_accepts_legacy_personal_label(self):
         # B's historical personal section uses ``B个人小计`` while newer
