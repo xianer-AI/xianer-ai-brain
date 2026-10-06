@@ -472,6 +472,8 @@ def issue(db,source,summary):
  if not status_only:
   summary=card_builder.normalize_summary(summary)
   summary=re.sub(r'(?m)^([^\n：]+)：0(?:（[^\n]*）)?$',r'\1：0双（数量为0，请核实）',summary)
+ from historical_supplement import validate_supplement_summary
+ validate_supplement_summary(a,summary)
  token=secrets.token_hex(6);expires=time.time()+86400
  with q.conn(db) as c:
   c.execute('BEGIN IMMEDIATE');c.execute("UPDATE review_cards SET state='superseded' WHERE source=? AND state IN ('pending','confirmed')",(source,))
@@ -503,6 +505,14 @@ def deliver_card(db, token, is_resend=False):
  if not row or row['state']!='pending' or row['expires']<=time.time():
   return {'token':token,'status':'skipped'}
  row=dict(row)
+ try:
+  from historical_supplement import validate_supplement_summary
+  source=q.get(db,row['source'])
+  if source: validate_supplement_summary(source,row['summary'])
+ except ValueError as exc:
+  with q.conn(db) as c:
+   c.execute("UPDATE review_cards SET state='superseded',delivery_error=? WHERE token=?",(str(exc),token))
+  return {'token':token,'status':'blocked','error':str(exc)}
  try:
   import sys
   transport_dir=Path(__file__).resolve().parent.parent/'group-companion'
@@ -560,7 +570,10 @@ def act(db,token,action,sender,group,callback):
   a=c.execute('SELECT * FROM inbox WHERE id=?',(r['source'],)).fetchone()
   if not a or a['digest']!=r['digest']:raise ValueError('原报数已改变')
   source_record=dict(a);source_record['result']=json.loads(source_record['result']) if source_record['result'] else None
-  if not ready_report(source_record):raise ValueError('原报数尚未完成结构化核对，不能确认')
+  if action=='confirm' and not ready_report(source_record):raise ValueError('原报数尚未完成结构化核对，不能确认')
+  if action=='confirm':
+   from historical_supplement import validate_supplement_summary
+   validate_supplement_summary(source_record,r['summary'])
   if action=='confirm':
    existing=c.execute("""SELECT message_id,status FROM confirmation_receipts
      WHERE source=? AND status IN ('pending','pending_dispatch','dispatching','dispatched')
@@ -688,6 +701,8 @@ def act_text(db,text,sender,group,callback):
    return result
   a=c.execute('SELECT * FROM inbox WHERE id=?',(r['source'],)).fetchone()
   if not a or a['digest']!=r['digest']: raise ValueError('原报数已改变')
+  from historical_supplement import validate_supplement_summary
+  validate_supplement_summary(dict(a),r['summary'])
   source_result=json.loads(a['result']) if a['result'] else {}
   source_date=(source_result.get('extracted') or {}).get('production_date')
   for row in c.execute("SELECT event,status,result FROM inbox WHERE sender=? AND grp=? AND created>? AND created<? AND id<>? ORDER BY created",(sender,group,a['created'],time.time(),callback)).fetchall():

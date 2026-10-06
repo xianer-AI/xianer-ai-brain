@@ -73,5 +73,36 @@ def require_bound_supplement(record):
     explicit=re.findall(r'(20\d{2})[-年/](\d{1,2})[-月/](\d{1,2})',str(event.get('content','')))
     if len(set(explicit))>1:
         raise ValueError('报数包含多个生产日期，暂停核对，禁止自动选择日期')
-    if explicit and products and products!=set(PRODUCTS):
+    raw=str(event.get('content','')).replace('冰袜袜','冰冰袜')
+    raw_products={p for p in PRODUCTS if re.search(re.escape(p)+r'\s*(?:[：:=、,，-]\s*)?[0-9]',raw)}
+    if explicit and products and (products!=set(PRODUCTS) or
+            (raw_products!=set(PRODUCTS) and not extracted.get('historical_supplement'))):
         raise ValueError('带日期的缺项报数必须先合并原台账，禁止缺项自动补零')
+    if explicit and products:
+        y,m,d=explicit[0]
+        day=f'{y}-{int(m):02d}-{int(d):02d}'
+        if extracted.get('production_date')!=day:
+            raise ValueError('解析生产日期与原消息不一致，禁止选择今天的日期')
+
+
+def validate_supplement_summary(record, summary):
+    """Historical cards must exactly show their preserved six-item result."""
+    import json
+    require_bound_supplement(record)
+    result=record.get('result') or {}
+    if isinstance(result,str): result=json.loads(result)
+    e=result.get('extracted') or {}
+    event=record.get('event') or {}
+    if isinstance(event,str): event=json.loads(event)
+    if e.get('status_only') or e.get('attendance_status'): return
+    if not e.get('historical_supplement') and not re.search(r'20\d{2}[-年/]\d{1,2}[-月/]\d{1,2}',str(event.get('content',''))): return
+    values={i['product']:i['quantity'] for i in e['items']}
+    for product in PRODUCTS:
+        numbers=re.findall(r'(?m)^'+re.escape(product)+r'\s*[：:]\s*([0-9][0-9,]*)',summary)
+        if len(numbers)!=1 or int(numbers[0].replace(',',''))!=values[product]:
+            raise ValueError('历史补核卡数量与原记录合并结果不一致，禁止发送或确认')
+    totals=re.findall(r'(?m)^合计\s*[：:]\s*([0-9][0-9,]*)',summary)
+    if len(totals)!=1 or int(totals[0].replace(',',''))!=sum(values.values()):
+        raise ValueError('历史补核卡合计不一致')
+    dates=re.findall(r'(?m)^生产(?:日|日期)\s*[：:]\s*\*{0,2}(20\d{2}-\d{2}-\d{2})',summary)
+    if dates!=[e['production_date']]: raise ValueError('历史补核卡生产日期不一致')

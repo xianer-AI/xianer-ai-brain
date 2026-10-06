@@ -163,6 +163,13 @@ def deliver(db):
                CASE resend_count WHEN 0 THEN ? WHEN 1 THEN ? ELSE 999999999 END)
           ) ORDER BY rowid""", (now, len(REMINDER_DELAYS), now, *REMINDER_DELAYS)).fetchall()
         for row in rows:
+            try:
+                from historical_supplement import validate_supplement_summary
+                source=c.execute('SELECT * FROM inbox WHERE id=?',(row['source'],)).fetchone()
+                if source: validate_supplement_summary(dict(source),row['summary'])
+            except ValueError as exc:
+                c.execute("UPDATE review_cards SET state='superseded',delivery_error=? WHERE token=?",(str(exc),row['token']))
+                continue
             is_reminder = row['delivery'] == 'sent'
             resend_count = int(row['resend_count'] or 0)
             # A recalled Feishu card is an explicit operator decision. Close

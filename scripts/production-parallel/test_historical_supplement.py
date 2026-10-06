@@ -112,3 +112,42 @@ class RecoveryIntegrationTests(unittest.TestCase):
   from historical_supplement import require_bound_supplement
   with self.assertRaisesRegex(ValueError,'多个生产日期'):
    require_bound_supplement({'event':{'content':'2026-09-20 2026-10-06 过膝袜0'},'result':{'extracted':{'items':[{'product':'过膝袜','quantity':0}]}}})
+ def test_model_invented_six_zero_items_from_three_fields_are_blocked(self):
+  from historical_supplement import require_bound_supplement
+  r={'event':{'content':'2026-09-20过膝袜0，女船袜0，男船袜0'},'result':{'extracted':{'items':[{'product':p,'quantity':0} for p in writer.PRODUCTS]}}}
+  with self.assertRaisesRegex(ValueError,'禁止缺项自动补零'):require_bound_supplement(r)
+ def test_correct_merged_source_cannot_send_zero_or_wrong_date_card(self):
+  from historical_supplement import validate_supplement_summary
+  e=merge_extracted(FIXTURE,{'worker':'A','production_date':'2026-09-20','items':[{'product':p,'quantity':0} for p in ('过膝袜','女船袜','男船袜')]},{'worker':'A'})
+  record={'event':{'content':'2026-09-20过膝袜0，女船袜0，男船袜0'},'result':{'extracted':e}}
+  good='生产日：2026-09-20\n'+'\n'.join(p+'：'+str(v) for p,v in preview(FIXTURE,'A','2026-09-20',{'过膝袜':0,'女船袜':0,'男船袜':0})['values'].items())+'\n合计：4200'
+  validate_supplement_summary(record,good)
+  for bad in [good.replace('2400','0'),good.replace('4200','0'),good.replace('2026-09-20','2026-10-06')]:
+   with self.assertRaises(ValueError):validate_supplement_summary(record,bad)
+ def test_stored_wrong_card_is_closed_before_delivery(self):
+  import tempfile,json,time
+  from pathlib import Path
+  import queue_store as q,review_cards
+  with tempfile.TemporaryDirectory() as d:
+   db=str(Path(d)/'inbox.sqlite');q.init(db);review_cards.init(db)
+   q.put(db,{'messageId':'om_partial','senderId':'ou_fixture','groupId':review_cards.GROUP,'content':'2026-09-20过膝袜0，女船袜0，男船袜0'})
+   e=merge_extracted(FIXTURE,{'worker':'A','production_date':'2026-09-20','items':[{'product':p,'quantity':0} for p in ('过膝袜','女船袜','男船袜')]},{'worker':'A'})
+   with q.conn(db) as c:
+    c.execute("UPDATE inbox SET status='ready',result=?",(json.dumps({'extracted':e}),))
+    c.execute('INSERT INTO review_cards(token,source,sender,grp,summary,digest,expires,state) VALUES(?,?,?,?,?,?,?,?)',('wrong','om_partial','ou_fixture',review_cards.GROUP,'生产日：2026-09-20\n'+'\n'.join(p+'：0' for p in writer.PRODUCTS)+'\n合计：0','digest',time.time()+1000,'pending'))
+   with patch('transport.request') as send:
+    r=review_cards.deliver_card(db,'wrong');send.assert_not_called()
+   self.assertEqual(r['status'],'blocked')
+   with q.conn(db) as c:self.assertEqual(c.execute("SELECT state FROM review_cards WHERE token='wrong'").fetchone()[0],'superseded')
+
+ def test_worded_partial_zeros_cannot_be_expanded_to_full_zeros(self):
+  from historical_supplement import require_bound_supplement
+  record={'event':{'content':'2026-09-20 过膝袜、女船袜、男船袜都为零'},'result':{'extracted':{'items':[{'product':p,'quantity':0} for p in writer.PRODUCTS]}}}
+  with self.assertRaises(ValueError):require_bound_supplement(record)
+ def test_full_dated_report_also_rejects_wrong_zero_card(self):
+  from historical_supplement import validate_supplement_summary,require_bound_supplement
+  values=dict(zip(writer.PRODUCTS,[2400,1500,300,0,0,0]))
+  record={'event':{'content':'2026-09-20 '+','.join(p+str(v) for p,v in values.items())},'result':{'extracted':{'production_date':'2026-09-20','items':[{'product':p,'quantity':v} for p,v in values.items()]}}}
+  with self.assertRaises(ValueError):validate_supplement_summary(record,'生产日：2026-09-20\n'+'\n'.join(p+'：0' for p in values)+'\n合计：0')
+  record['result']['extracted']['production_date']='2026-10-06'
+  with self.assertRaisesRegex(ValueError,'解析生产日期'):require_bound_supplement(record)
