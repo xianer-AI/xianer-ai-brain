@@ -57,3 +57,21 @@ def merge_extracted(text, extracted, identity):
                   items=[{'product':p,'quantity':v,'process':'下机' if worker in 'AB' else '烤边'} for p,v in merged['values'].items()],
                   missing=[],total=merged['total'],backfill=False)
     return result
+
+def require_bound_supplement(record):
+    """Reject explicit-date partial reports at every card/write boundary."""
+    import json
+    result=record.get('result') or {}
+    if isinstance(result,str): result=json.loads(result)
+    event=record.get('event') or {}
+    if isinstance(event,str): event=json.loads(event)
+    extracted=result.get('extracted') or {}
+    if extracted.get('status_only') or extracted.get('attendance_status'):
+        return
+    items=extracted.get('items') or []
+    products={i.get('product') for i in items}
+    explicit=re.findall(r'(20\d{2})[-年/](\d{1,2})[-月/](\d{1,2})',str(event.get('content','')))
+    if len(set(explicit))>1:
+        raise ValueError('报数包含多个生产日期，暂停核对，禁止自动选择日期')
+    if explicit and products and products!=set(PRODUCTS):
+        raise ValueError('带日期的缺项报数必须先合并原台账，禁止缺项自动补零')

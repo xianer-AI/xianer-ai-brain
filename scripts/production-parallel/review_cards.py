@@ -38,6 +38,9 @@ def _verified_upload_receipt(db, source, confirmation=None):
          and bool(receipt.get('commit')))
 
 def ready_report(record):
+ from historical_supplement import require_bound_supplement
+ try: require_bound_supplement(record)
+ except ValueError: return False
  result=record.get('result') or {}
  extracted=result.get('extracted') or {}
  items=extracted.get('items') or []

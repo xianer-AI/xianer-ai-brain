@@ -286,6 +286,12 @@ def scan(db, limit=200):
                     c.execute('UPDATE inbox SET error=? WHERE id=?',
                               ('历史补核暂停：' + str(exc)[:180], row['id']))
                     continue
+            try:
+                from historical_supplement import require_bound_supplement
+                require_bound_supplement(record)
+            except ValueError as exc:
+                c.execute('UPDATE inbox SET error=? WHERE id=?', ('报数暂停：'+str(exc),row['id']))
+                continue
             if extracted.get('historical_supplement'):
                 duplicate = False
                 for active in c.execute("SELECT rc.source,i.result FROM review_cards rc JOIN inbox i ON i.id=rc.source WHERE rc.sender=? AND rc.grp=? AND rc.state IN ('pending','confirmed') AND rc.source<>?", (row['sender'],row['grp'],row['id'])).fetchall():

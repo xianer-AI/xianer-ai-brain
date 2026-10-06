@@ -124,6 +124,8 @@ def format_success_receipt(report, source, confirmation, commit, reread_note):
 
 def report_from_inbox_row(row):
  """Build the receipt report from a queue-store row returned by q.get()."""
+ from historical_supplement import require_bound_supplement
+ require_bound_supplement(row or {})
  result=row.get('result') if row else None
  if isinstance(result,str):
   result=json.loads(result)

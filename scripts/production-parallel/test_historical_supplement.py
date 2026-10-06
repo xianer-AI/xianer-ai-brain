@@ -100,3 +100,15 @@ class RecoveryIntegrationTests(unittest.TestCase):
  def test_recovery_receipt_requires_actual_six_values(self):
   report={'worker':'A','production_date':'2026-09-20','values':preview(FIXTURE,'A','2026-09-20',{'过膝袜':0,'女船袜':0,'男船袜':0})['values'],'historical_supplement':{'过膝袜':0,'女船袜':0,'男船袜':0}}
   self.assertFalse(writer._remote_contains_exact_task(FIXTURE+' source confirm',report,'source','confirm'))
+ def test_all_card_and_upload_boundaries_reject_unmerged_partial(self):
+  import review_cards,commit_guard
+  record={'status':'ready','event':{'content':'2026-09-20过膝袜0，女船袜0，男船袜0'},'result':{'extracted':{'kind':'report','worker':'A','production_date':'2026-09-20','items':[{'product':p,'quantity':0} for p in ('过膝袜','女船袜','男船袜')]}}}
+  self.assertFalse(review_cards.ready_report(record))
+  with self.assertRaisesRegex(ValueError,'禁止缺项自动补零'):commit_guard.report_from_inbox_row(record)
+  record['result']['extracted']=merge_extracted(FIXTURE,record['result']['extracted'],{'worker':'A'})
+  self.assertTrue(review_cards.ready_report(record))
+  self.assertEqual(commit_guard.report_from_inbox_row(record)['total'],4200)
+ def test_multiple_dates_cannot_be_guessed(self):
+  from historical_supplement import require_bound_supplement
+  with self.assertRaisesRegex(ValueError,'多个生产日期'):
+   require_bound_supplement({'event':{'content':'2026-09-20 2026-10-06 过膝袜0'},'result':{'extracted':{'items':[{'product':'过膝袜','quantity':0}]}}})
