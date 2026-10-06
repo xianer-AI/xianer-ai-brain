@@ -1,9 +1,11 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 import queue_store as q
 import recovery_scan
+import worker_identity
 
 
 class RecoveryScanTests(unittest.TestCase):
@@ -16,10 +18,14 @@ class RecoveryScanTests(unittest.TestCase):
             'content': '冰冰袜：100双 棉堆堆袜：200双 小腿袜：0双 过膝袜：0双 女船袜：0双 男船袜：0双',
             'timestamp': '2026-09-23T12:00:00+08:00',
         })
+        worker_identity.init(self.db)
+        with q.conn(self.db) as c:
+            c.execute("INSERT INTO worker_identity VALUES('A','徐超超','sender-a','test','om_fixture',0)")
         q.finish(self.db, 'om_source_1', q.claim(self.db)['lease'], {
             'agent': '规则化报数解析', 'draft_only': True,
-            'extracted': {'kind': 'report', 'worker': 'unknown',
-                          'items': [{'product': '过膝袜', 'quantity': 0, 'process': '下机'}],
+            'extracted': {'kind': 'report', 'worker': 'A',
+                          'items': [{'product': product, 'quantity': quantity, 'process': '下机'}
+                                    for product, quantity in zip(recovery_scan.PRODUCTS, [200, 100, 0, 0, 0, 0])],
                           'missing': [], 'production_date': '2026-09-23'}
         })
 
@@ -35,7 +41,22 @@ class RecoveryScanTests(unittest.TestCase):
             row = c.execute("SELECT state, summary FROM review_cards WHERE source='om_source_1'").fetchone()
         self.assertEqual(row['state'], 'pending')
         self.assertIn('网络恢复后补处理', row['summary'])
-        self.assertIn('棉堆堆袜：0 双（数量为0，请核实）', row['summary'])
+        self.assertIn('身份：A=徐超超 请核实', row['summary'])
+        self.assertIn('棉堆堆袜：200 双', row['summary'])
+        self.assertIn('冰冰袜：100 双', row['summary'])
+        self.assertIn('合计：300 双', row['summary'])
+
+    def test_corrupt_zero_draft_cannot_replace_nonzero_original_report(self):
+        with q.conn(self.db) as c:
+            result = json.loads(c.execute("SELECT result FROM inbox WHERE id='om_source_1'").fetchone()['result'])
+            for item in result['extracted']['items']:
+                item['quantity'] = 0
+            c.execute("UPDATE inbox SET result=? WHERE id='om_source_1'", (json.dumps(result),))
+        self.assertEqual(recovery_scan.scan(self.db), [])
+        with q.conn(self.db) as c:
+            self.assertIsNone(c.execute("SELECT 1 FROM review_cards WHERE source='om_source_1'").fetchone())
+            error = c.execute("SELECT error FROM inbox WHERE id='om_source_1'").fetchone()['error']
+        self.assertIn('禁止生成全零核对卡', error)
 
     def test_existing_confirmed_or_uploaded_source_is_skipped(self):
         recovery_scan.scan(self.db)

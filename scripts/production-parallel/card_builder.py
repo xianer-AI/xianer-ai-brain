@@ -16,6 +16,10 @@ _INSTRUCTION = ('请核实以上内容。明确报0或未上报项目均显示�
                 '有错请回复“**错误**”，直接重报完整、正确的六项生产数量，缺项请明确填写0。'
                 '原批次不会上传，系统会按新报数重新生成核对清单。')
 
+_SUPPLEMENT_INSTRUCTION = ('请核对上面原生产日期的完整六项数量。已有记录保留，只补本次明确填写的缺项，不新增重复产量。'
+                           '无误请回复“**准确**”；有错请回复“**错误**”，这张卡将停用后重新核对。'
+                           '未填写的项目不能自动当作0，不能把历史补核当成今天的产能。')
+
 _PRODUCTS = ('棉堆堆袜', '冰冰袜', '小腿袜', '过膝袜', '女船袜', '男船袜')
 _WORKERS = {
     'A': ('徐超超', '下机'),
@@ -69,7 +73,7 @@ def payload(summary, *, backfill=False):
     content = normalize_summary(summary)
     if backfill:
         content = _decorate_backfill_summary(content)
-    content += '\n\n' + _INSTRUCTION
+    content += '\n\n' + (_SUPPLEMENT_INSTRUCTION if '历史缺项补核' in content else _INSTRUCTION)
     return {'config': {'wide_screen_mode': True},
             'header': {'title': {'tag': 'plain_text',
                                  'content': BACKFILL_REVIEW_TITLE if backfill else CARD_TITLE},

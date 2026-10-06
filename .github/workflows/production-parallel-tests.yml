@@ -5,10 +5,18 @@ on:
     branches: [main]
     paths:
       - 'scripts/production-parallel/**'
+      - 'scripts/build_production_dashboard.py'
+      - 'scripts/publish_production_dashboard.py'
+      - 'scripts/test_production_dashboard.py'
+      - 'docs/dashboard.template.html'
       - '.github/workflows/production-parallel-tests.yml'
   pull_request:
     paths:
       - 'scripts/production-parallel/**'
+      - 'scripts/build_production_dashboard.py'
+      - 'scripts/publish_production_dashboard.py'
+      - 'scripts/test_production_dashboard.py'
+      - 'docs/dashboard.template.html'
       - '.github/workflows/production-parallel-tests.yml'
   workflow_dispatch:
 
@@ -22,15 +30,12 @@ jobs:
       - name: 准备真实台账测试样本
         run: |
           cp '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md' /tmp/ledger-current.md
-      - name: 运行本次故障专项回归测试
+      - name: 运行完整生产回归（含正常报数、历史补核和防重放）
         working-directory: scripts/production-parallel
         env:
           PYTHONDONTWRITEBYTECODE: "1"
-        run: |
-          python3 -m unittest             test_deterministic_upload.ProductionStatusRegressionTests             test_coverage_tables.CoverageTableTests.test_confirmed_status_suppresses_stale_pending_queue
-      - name: 运行核心覆盖表测试
-        working-directory: scripts/production-parallel
+        run: python3 -m unittest discover -p 'test_*.py' -q
+      - name: 运行手机和电脑发布快照回归
         env:
           PYTHONDONTWRITEBYTECODE: "1"
-        run: |
-          python3 -m unittest test_coverage_tables.py
+        run: python3 -m unittest discover -s scripts -p test_production_dashboard.py -v

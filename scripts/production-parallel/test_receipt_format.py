@@ -1,4 +1,6 @@
+import json
 import unittest
+from pathlib import Path
 from commit_guard import format_success_receipt, report_from_inbox_row
 
 
@@ -26,7 +28,8 @@ class ReceiptFormatTests(unittest.TestCase):
         self.assertIn('GitHub 回执', receipt)
         self.assertIn('已更新：2026下半年下机白胚半成品统计.md', receipt)
         self.assertIn('同步验收：全部一致', receipt)
-        self.assertIn('生产统计工作台版本：V1.17', receipt)
+        release = json.loads(Path(__file__).with_name('VERSION.json').read_text(encoding='utf-8'))
+        self.assertIn(f'生产统计工作台版本：{release["workbench_version"]}', receipt)
         self.assertIn('远程 commit：abc123', receipt)
 
     def test_missing_commit_cannot_be_presented_as_success(self):

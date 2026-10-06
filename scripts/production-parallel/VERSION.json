@@ -1,10 +1,14 @@
 {
   "workbench": "生产统计工作台",
-  "workbench_version": "V1.17",
+  "workbench_version": "V1.18",
   "sync_protocol_version": "S1",
   "card_protocol_version": "CARD-INTERACTIVE-1",
   "github_commit": "4e26c05ae187f53fefd2816cf9e42a462ed756ad",
   "github_source": "xianer-AI/xianer-ai-brain/main/scripts/production-parallel",
   "load_policy": "只在版本或内容哈希变化时重新加载规则；日常状态查询不调用模型",
-  "runtime_source": "scripts/production-parallel"
+  "runtime_source": "scripts/production-parallel",
+  "release_id": "2026-10-06-v1.18",
+  "release_status": "正式",
+  "mobile_dashboard_url": "https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html",
+  "rule_scope": "正常报数、自动/手动补报、历史缺项补核、手机和电脑网站"
 }

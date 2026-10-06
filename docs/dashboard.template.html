@@ -1,6 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>袜子生产统计工作台</title>
 <style>
 
@@ -13,11 +14,12 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
  body{padding:8px}main{padding:18px 14px;border-radius:12px;box-shadow:none}h1{font-size:24px}h2{font-size:21px;margin-top:26px}.sub{font-size:14px}.section-nav{gap:8px;margin:16px 0}.section-nav a{flex:1 1 calc(50% - 8px);justify-content:center;padding:8px;font-size:14px}.banner{padding:12px;margin:16px 0}.banner strong{font-size:16px}.banner>span{font-size:13px;width:100%}.freshness{font-size:12px;gap:4px;margin:-8px 0 14px}.freshness>span:last-child{display:none}.alert,.task-health{padding:10px 12px;font-size:13px}.sync-panel{padding:0 12px}.sync-caption{font-size:11px}.sync-table,.sync-table tbody{display:block}.sync-table thead{display:none}.sync-table tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:6px 10px;padding:12px 0;border-top:1px solid #e2e8f0}.sync-table td{display:block;width:auto!important;padding:0;border:0;font-size:13px;min-width:0}.sync-table td:nth-child(1){font-size:16px;font-weight:700}.sync-table td:nth-child(2){font-size:12px;color:#64748b}.sync-table td:nth-child(3),.sync-table td:nth-child(4){grid-column:1/-1}.sync-table td:nth-child(4){color:#64748b;font-size:12px}.sync-table td:nth-child(4)::before{content:'最后同步：'}.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{padding:12px 10px}.card b{font-size:23px}.capacity-name{font-size:15px}.card small{font-size:12px;line-height:1.6}.section-note{font-size:13px;line-height:1.7}.desktop-view{display:none}.mobile-view{display:grid;gap:12px}.product-card{border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fff;min-width:0}.product-card-header{display:flex;justify-content:space-between;gap:10px;align-items:center}.worker-name{font-size:17px;font-weight:700;min-width:0}.process-tag{font-size:12px;color:#475569;background:#f1f5f9;border-radius:6px;padding:3px 8px;white-space:nowrap}.product-card-total{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 0}.product-card-total>span{font-size:13px;color:#64748b}.product-card-total strong{font-size:24px;color:#202124;font-variant-numeric:tabular-nums}.product-card-total strong small{font-size:13px;font-weight:400;margin-left:3px}.product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;margin:0;padding:12px 0;border-top:1px solid #edf1f5}.product-cell{display:flex;justify-content:space-between;gap:6px;align-items:baseline;min-width:0}.product-cell dt{color:#64748b;font-size:13px}.product-cell dd{margin:0;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}.product-cell dd.quantity-pending{color:#9a3412;font-size:13px}.product-card-footer{border-top:1px solid #edf1f5;padding-top:10px;font-size:12px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;color:#64748b}.empty-record{margin:10px 0 0;padding-top:10px;border-top:1px solid #edf1f5;font-size:14px}.day-group{display:grid;gap:10px}.day-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px;margin:8px 0 0;font-size:17px;color:#1e3a8a}.day-heading span{font-size:12px;font-weight:400;color:#64748b}.day-heading>span:first-child{font-size:17px;font-weight:700;color:#1e3a8a}.filter-bar{align-items:stretch;gap:10px}.filter-field{flex:1 1 140px;display:flex;flex-direction:column;align-items:stretch;gap:5px}.filter-bar select{width:100%;font-size:16px;padding:9px 10px}.filter-bar>.muted{width:100%;font-size:12px}.employee-details details{border-radius:10px}.employee-details summary{padding:14px 12px;font-size:16px}.employee-details .mobile-view{padding:12px;background:#f8fafc}.history-date{font-size:16px;font-weight:700;color:#1e3a8a}.history-meta{font-size:12px;color:#64748b}.refresh-footer{line-height:1.7}
 }
 </style>
+<style>.banner.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}.banner.checking{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}</style>
 <main>
 <h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div>
 <nav class="section-nav" aria-label="产能导航"><a href="#daily-title">每日产能</a><a href="#monthly-title">月产能汇总</a><a href="#monthly-detail-title">每月明细</a><a href="#history-title">员工明细</a><a href="#period-title">累计产能</a></nav>
 <div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div>
-<details class="sync-panel" id="sync-panel"><summary><span>三端同步详情</span><span class="sync-caption">GitHub · OpenClaw · 飞书</span></summary><table class="sync-table"><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table></details>
+<details class="sync-panel" id="sync-panel"><summary><span>同步详情</span><span class="sync-caption">GitHub · OpenClaw · 飞书 · 手机网页</span></summary><table class="sync-table"><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table></details>
 <h2 id="overview-title">产能总览</h2><p class="muted section-note">按员工和工序分别统计，每个人单独计算。</p><div id="capacity"></div>
 <h2 id="daily-title">每日生产产品明细</h2><p class="muted section-note">默认显示最近3个记录日期。未上班、待核实和无记录分别标注，不当作0。</p>
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
@@ -33,10 +35,12 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 
 <h2 id="period-title">2026年下半年累计产能</h2><p class="muted section-note">选择员工查看个人或全部员工的下半年累计；缺失月份不当作0。</p><div class="filter-bar"><div class="filter-field"><label for="period-worker">员工</label><select id="period-worker"><option value="all">全部员工</option></select></div></div><div id="period-summary"></div>
 
-<p class="muted refresh-footer">每30秒刷新台账快照；腾讯云发布最新台账后，页面会在下次刷新时更新。<span id="next-refresh">下次刷新：30 秒</span></p>
+<p class="muted refresh-footer">手机和电脑读取同一份已发布台账，每30秒核查网站版本；发现新快照后自动更新。网络异常时保留当前数据并提示。<span id="next-refresh">下次核查：30 秒</span></p>
 </main>
 <script>
 let md=window.__LEDGER__||'';
+const dashboardRelease=window.__DASHBOARD_RELEASE__||{};
+let websiteVerification='checking',websiteCheckedAt=null,websiteCheckInFlight=false;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cn=t=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(t).replaceAll('/','-');
 function syncRowsFromLedger(){
@@ -46,6 +50,46 @@ function syncRowsFromLedger(){
     rows.push({source:row[1],version:row[2].trim(),status:row[3].trim(),time:row[4].trim()});
   }
   return rows;
+}
+function snapshotSyncState(release,rows,checkSection){
+  if(!release.workbench_version||!release.rules_release_id||!release.source_digest)return {kind:'warn',label:'网页版本信息缺失'};
+  if(release.release_status!=='正式')return {kind:'warn',label:'网页尚未使用正式版本'};
+  if(['GitHub','OpenClaw','飞书'].some(source=>!rows.some(row=>row.source===source)))return {kind:'warn',label:'同步证据不完整'};
+  if(rows.some(row=>/失败|异常|卡住|阻塞|重试|reply_pending/.test(row.status)))return {kind:'error',label:'同步存在异常'};
+  const consistent=(checkSection.match(/\|\s*三端规则版本\s*\|\s*([^|]+)/)||[])[1]?.trim();
+  if(consistent!=='一致'||rows.some(row=>row.version.split('/')[0].trim()!==release.workbench_version))return {kind:'error',label:'规则版本未对齐'};
+  if(rows.some(row=>/处理中|待同步|待处理/.test(row.status)))return {kind:'warn',label:'同步处理中'};
+  return {kind:'ok',label:'数据同步正常'};
+}
+function renderSyncBanner(){
+  const rows=syncRowsFromLedger(), section=(md.match(/### 异常检查([\s\S]*?)(?=\n## |\n<a id=|$)/)||[])[1]||'';
+  let state=snapshotSyncState(dashboardRelease,rows,section);
+  if(websiteVerification==='checking')state={kind:'checking',label:'网页已加载，正在核查网站版本'};
+  else if(websiteVerification==='failed')state={kind:'warn',label:'更新核查失败，当前显示已加载快照'};
+  const b=document.querySelector('#banner');
+  b.className='banner'+(state.kind==='ok'?'':' '+state.kind);
+  b.innerHTML=`<strong>${state.kind==='ok'?'●':'⚠'} ${esc(state.label)}</strong><span>网页规则：${esc(dashboardRelease.workbench_version||'未记录')} · ${esc(dashboardRelease.rules_release_id||'未记录')}${websiteCheckedAt?` · 网站核查：${esc(cn(websiteCheckedAt))}`:''}</span>`;
+  const row=document.querySelector('#website-sync');
+  if(row){row.querySelector('[data-website-status]').textContent=websiteVerification==='verified'?'✓ 网站快照已核对':websiteVerification==='failed'?'⚠ 核查失败，保留旧快照':'正在核查网站版本';row.querySelector('[data-website-status]').className=websiteVerification==='verified'?'ok':websiteVerification==='failed'?'waiting':'';row.querySelector('[data-website-time]').textContent=websiteCheckedAt?cn(websiteCheckedAt):'尚未核查';}
+}
+function cacheBypassUrl(address,stamp){const url=new URL(address);url.searchParams.set('_sync',String(stamp));return url.href;}
+async function checkPublishedSnapshot(){
+  if(websiteCheckInFlight)return;
+  websiteCheckInFlight=true;
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+  try{
+    const response=await fetch(cacheBypassUrl(new URL('release.json',location.href).href,Date.now()),{cache:'no-store',signal:controller.signal});
+    if(!response.ok)throw Error(`HTTP ${response.status}`);
+    const latest=await response.json();
+    if(latest.schema!==1||!/^[a-f0-9]{64}$/.test(latest.source_digest)||!latest.rules_release_id)throw Error('网站版本信息不完整');
+    if(latest.source_digest!==dashboardRelease.source_digest){
+      saveView('scroll',String(window.scrollY));
+      location.replace(cacheBypassUrl(location.href,Date.now()));
+      return;
+    }
+    websiteVerification='verified';websiteCheckedAt=new Date();
+  }catch{websiteVerification='failed';}
+  finally{clearTimeout(timeout);websiteCheckInFlight=false;renderSyncBanner();}
 }
 function renderAlerts(stamp,syncRows){
   const alerts=[];
@@ -351,12 +395,10 @@ function refresh(){
     if(!md)throw Error('台账内容未嵌入');
     const syncRows=syncRowsFromLedger();
     const stamp=syncRows[0]?.time||(md.match(/最后同步\s*\|\s*([^|]+)/)||[])[1]?.trim()||'台账未记录';
-    document.querySelector('#banner').className='banner';
-    document.querySelector('#banner').innerHTML=`<strong>● 数据同步正常</strong><span>页面最后刷新：${esc(cn(now))}</span>`;
-    document.querySelector('#freshness').innerHTML=`<span>台账快照：${esc(stamp)}</span><span>页面刷新：${esc(cn(now))}</span>`;
+    document.querySelector('#freshness').innerHTML=`<span>台账快照：${esc(stamp)}</span><span>网页生成：${esc(dashboardRelease.generated_at?cn(new Date(dashboardRelease.generated_at)):'未记录')}</span>`;
     renderAlerts(stamp,syncRows);
     renderTaskHealth(syncRows);
-    const defaults=[['GitHub','V1.17'],['OpenClaw','V1.17 / S1'],['飞书','V1.17 / CARD-INTERACTIVE-1']];
+    const defaults=[['GitHub',dashboardRelease.workbench_version],['OpenClaw',`${dashboardRelease.workbench_version} / ${dashboardRelease.sync_protocol_version}`],['飞书',`${dashboardRelease.workbench_version} / ${dashboardRelease.card_protocol_version}`]];
     document.querySelector('#sync').innerHTML=defaults.map(([source,version])=>{
       const row=syncRows.find(item=>item.source===source)||{source,version,status:'未记录',time:stamp};
       const bad=/失败|异常|卡住|阻塞/.test(row.status), businessPending=!bad&&row.source==='飞书'&&/等待核实/.test(row.status), pending=/处理中|等待|待核实|待同步/.test(row.status);
@@ -366,7 +408,8 @@ function refresh(){
       const label=count?`待核实 ${count} 条`:'待核实';
       const status=businessPending?`<div class="status-content"><span class="ok">✓ 同步正常</span><span class="business-pending">${esc(label)}</span></div>`:`<span class="${cls}">${icon} ${esc(row.status)}</span>`;
       return `<tr><td>${esc(row.source)}</td><td>${esc(row.version||version)}</td><td>${status}</td><td>${esc(row.time||stamp)}</td></tr>`;
-    }).join('');
+    }).join('')+`<tr id="website-sync"><td>手机／电脑网页</td><td>${esc(dashboardRelease.workbench_version||'未记录')} / ${esc(dashboardRelease.rules_release_id||'未记录')}</td><td data-website-status>正在核查网站版本</td><td data-website-time>尚未核查</td></tr>`;
+    renderSyncBanner();
     const workers=parseWorkers(), statusMap=parseStatusMap(), records=parseRecords();
     window.__dashboardContext={workers,statusMap,records};
     prepareFilters(workers,records);
@@ -380,7 +423,9 @@ function refresh(){
   }catch(e){const b=document.querySelector('#banner');b.className='banner error';b.textContent='读取失败：'+e.message;}
 }
 refresh();
-if(performance.getEntriesByType('navigation')[0]?.type==='reload')requestAnimationFrame(()=>window.scrollTo(0,Number(savedView('scroll','0'))));
+checkPublishedSnapshot();
+if(performance.getEntriesByType('navigation')[0]?.type==='reload'||new URL(location.href).searchParams.has('_sync'))requestAnimationFrame(()=>window.scrollTo(0,Number(savedView('scroll','0'))));
 window.addEventListener('pagehide',()=>saveView('scroll',String(window.scrollY)));
-let seconds=30;setInterval(()=>{seconds--;const el=document.querySelector('#next-refresh');if(el)el.textContent=`下次刷新：${seconds} 秒`;if(seconds<=0)location.reload();},1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkPublishedSnapshot();});
+let seconds=30;setInterval(()=>{seconds--;const el=document.querySelector('#next-refresh');if(el)el.textContent=`下次核查：${seconds} 秒`;if(seconds<=0){seconds=30;checkPublishedSnapshot();}},1000);
 </script>

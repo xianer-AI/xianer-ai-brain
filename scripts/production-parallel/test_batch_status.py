@@ -67,9 +67,9 @@ class BatchStatusTests(unittest.TestCase):
             db = str(Path(directory) / 'inbox.sqlite')
             q.init(db)
             status = get_batch_status(db, 'om_missing')
-            self.assertEqual(status['workbench_version'], 'V1.17')
-            self.assertEqual(status['sync_protocol_version'], 'S1')
-            self.assertEqual(status['card_protocol_version'], 'CARD-INTERACTIVE-1')
+            release = json.loads(Path(__file__).with_name('VERSION.json').read_text(encoding='utf-8'))
+            for field in ('workbench_version', 'sync_protocol_version', 'card_protocol_version'):
+                self.assertEqual(status[field], release[field])
 
     def test_verified_historical_batch_is_completed_not_pending(self):
         with tempfile.TemporaryDirectory() as directory:

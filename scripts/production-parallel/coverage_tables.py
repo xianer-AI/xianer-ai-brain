@@ -8,7 +8,24 @@ table.
 from __future__ import annotations
 
 import datetime as dt
+import json
 from collections.abc import Iterable, Mapping
+from pathlib import Path
+
+VERSION_PATH = Path(__file__).with_name('VERSION.json')
+
+
+def version_info() -> dict[str, str]:
+    """Read the release being rendered rather than caching a display version."""
+    try:
+        data = json.loads(VERSION_PATH.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    return {key: str(data.get(key) or '未核实') for key in (
+        'workbench_version', 'sync_protocol_version', 'card_protocol_version',
+    )}
 
 WORKERS = {
     "A": "徐超超",
@@ -375,6 +392,10 @@ def render(
     for source, value in (platform_status or {}).items():
         if source in status and value:
             status[source] = str(value)
+    release = version_info()
+    version = release['workbench_version']
+    sync_protocol = release['sync_protocol_version']
+    card_protocol = release['card_protocol_version']
     lines = [
         "## 人员生产记录覆盖情况",
         "",
@@ -382,10 +403,10 @@ def render(
         "",
         "| 数据源 | 版本/协议 | 同步状态 | 最后同步成功时间（北京时间） |",
         "|---|---|---|---|",
-        f"| GitHub | V1.17 | {status['GitHub']} | {sync_time} |",
-        f"| OpenClaw | V1.17 / S1 | {status['OpenClaw']} | {sync_time} |",
-        f"| 飞书 | V1.17 / CARD-INTERACTIVE-1 | {status['飞书']} | {sync_time} |",
-        "> 页面每30秒刷新已发布台账快照；GitHub更新并完成Cloudflare自动构建后显示最新数据；页面刷新时间与各平台最后成功同步时间分开显示。",
+        f"| GitHub | {version} | {status['GitHub']} | {sync_time} |",
+        f"| OpenClaw | {version} / {sync_protocol} | {status['OpenClaw']} | {sync_time} |",
+        f"| 飞书 | {version} / {card_protocol} | {status['飞书']} | {sync_time} |",
+        "> 手机和电脑每30秒核查同一CloudBase发布快照；GitHub更新并完成发布、线上回读后显示最新数据；网站核查时间与台账最后成功同步时间分开显示。",
         "",
         "### 异常检查",
         "",

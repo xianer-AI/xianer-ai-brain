@@ -174,3 +174,8 @@ class RecoveryIntegrationTests(unittest.TestCase):
   from historical_supplement import require_bound_supplement
   record={'event':{'content':'棉堆堆袜2400 冰冰袜1500 小腿袜300 过膝袜0 女船袜0 男船袜0'},'result':{'extracted':{'items':[{'product':p,'quantity':0} for p in writer.PRODUCTS]}}}
   with self.assertRaisesRegex(ValueError,'禁止生成全零'):require_bound_supplement(record)
+ def test_historical_card_never_instructs_employee_to_zero_missing_fields(self):
+  import card_builder,json
+  text=json.dumps(card_builder.payload('历史缺项补核\n生产日：2026-09-20\n合计：4200'),ensure_ascii=False)
+  self.assertIn('已有记录保留',text)
+  self.assertNotIn('核实项按0双上传',text)
