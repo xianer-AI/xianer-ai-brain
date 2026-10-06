@@ -1,0 +1,14 @@
+{
+  "builder_sha256": "6e5a49368e1170e9fe1d37ae064e2a07118da559ecdd4d25cb18f29c04cc2a67",
+  "card_protocol_version": "CARD-INTERACTIVE-1",
+  "generated_at": "2026-10-06T15:09:36+00:00",
+  "ledger_sha256": "6d35841b9e08581b19bb2c53d1cf562263fd248e16449f2defec5f7d3998604c",
+  "release_status": "正式",
+  "rules_release_id": "2026-10-06-v1.18",
+  "schema": 1,
+  "source_digest": "fb0bdb8de6fd85822a5e7e232cd95dd13f1c71781da7b94dfd55b2927c0ebbcf",
+  "sync_protocol_version": "S1",
+  "template_sha256": "6030b3c2d8cdb4f77dab5b7123aa3224a139941e5bd3e94e17d20f212bd67156",
+  "version_sha256": "8cc5cb772fa80ba3b8dbb19bb66803a5f17110956b04becb7a1a3af2406aa029",
+  "workbench_version": "V1.18"
+}
