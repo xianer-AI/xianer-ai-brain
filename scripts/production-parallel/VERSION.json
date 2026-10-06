@@ -3,7 +3,7 @@
   "workbench_version": "V1.18",
   "sync_protocol_version": "S1",
   "card_protocol_version": "CARD-INTERACTIVE-1",
-  "github_commit": "4e26c05ae187f53fefd2816cf9e42a462ed756ad",
+  "github_commit": "4999cdf4887ca0aa04459fae5be76097b92aa9a9",
   "github_source": "xianer-AI/xianer-ai-brain/main/scripts/production-parallel",
   "load_policy": "只在版本或内容哈希变化时重新加载规则；日常状态查询不调用模型",
   "runtime_source": "scripts/production-parallel",
