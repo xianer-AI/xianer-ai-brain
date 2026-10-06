@@ -151,3 +151,17 @@ class RecoveryIntegrationTests(unittest.TestCase):
   with self.assertRaises(ValueError):validate_supplement_summary(record,'生产日：2026-09-20\n'+'\n'.join(p+'：0' for p in values)+'\n合计：0')
   record['result']['extracted']['production_date']='2026-10-06'
   with self.assertRaisesRegex(ValueError,'解析生产日期'):require_bound_supplement(record)
+ def test_deleted_bad_message_cannot_reenter_queue(self):
+  import tempfile
+  from pathlib import Path
+  import queue_store as q
+  with tempfile.TemporaryDirectory() as d:
+   db=str(Path(d)/'inbox.sqlite')
+   bad={'messageId':'om_retired','senderId':'ou_test','groupId':'g','content':'old invalid draft'}
+   q.put(db,bad);q.block_replay(db,['om_retired'])
+   with q.conn(db) as c:c.execute("DELETE FROM inbox WHERE id='om_retired'")
+   self.assertIsNone(q.put(db,bad));self.assertIsNone(q.get(db,'om_retired'));self.assertIsNone(q.claim(db))
+   with q.conn(db) as c:
+    row=c.execute('SELECT * FROM blocked_message_fingerprints').fetchone()
+    self.assertEqual(len(row['id_hash']),64);self.assertNotIn('om_retired',str(tuple(row)))
+   self.assertEqual(q.put(db,dict(bad,messageId='om_fresh')), 'om_fresh')

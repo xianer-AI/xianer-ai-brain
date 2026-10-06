@@ -14,14 +14,25 @@ def conn(db):
 def init(db):
  with conn(db) as c:
   c.execute('PRAGMA journal_mode=WAL')
+  c.execute('CREATE TABLE IF NOT EXISTS blocked_message_fingerprints(id_hash TEXT PRIMARY KEY)')
   c.execute('''CREATE TABLE IF NOT EXISTS inbox(id TEXT PRIMARY KEY, sender TEXT NOT NULL, grp TEXT NOT NULL, event TEXT NOT NULL, digest TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', lease TEXT, expires REAL, result TEXT, attempts INTEGER NOT NULL DEFAULT 0, created REAL NOT NULL, error TEXT)''')
+
+def block_replay(db, message_ids):
+ """Retain only one-way ID fingerprints, without message/card content."""
+ init(db)
+ with conn(db) as c:
+  c.executemany('INSERT OR IGNORE INTO blocked_message_fingerprints(id_hash) VALUES(?)',
+                [(hashlib.sha256(str(mid).encode()).hexdigest(),) for mid in message_ids])
 
 def put(db,event):
  for k in ['messageId','senderId','groupId','content']:
   if not isinstance(event.get(k),str) or not event[k].strip(): raise ValueError('missing '+k)
  init(db); raw=json.dumps(event,ensure_ascii=False,sort_keys=True);digest=hashlib.sha256(json.dumps({k:event[k] for k in ['messageId','senderId','groupId','content']},sort_keys=True).encode()).hexdigest()
  with conn(db) as c:
-  c.execute('BEGIN IMMEDIATE'); old=c.execute('SELECT digest FROM inbox WHERE id=?',(event['messageId'],)).fetchone()
+  c.execute('BEGIN IMMEDIATE')
+  if c.execute('SELECT 1 FROM blocked_message_fingerprints WHERE id_hash=?',(hashlib.sha256(event['messageId'].encode()).hexdigest(),)).fetchone():
+   return None
+  old=c.execute('SELECT digest FROM inbox WHERE id=?',(event['messageId'],)).fetchone()
   if old:
    if old['digest']!=digest: raise ValueError('same source ID changed; preserve original and request explicit correction')
    return event['messageId']
