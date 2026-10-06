@@ -201,7 +201,7 @@ function summaryCards(workers,records,statusMap,month=''){
 }
 function recordCard(worker,rec,state,date=''){
   const subtotal=rec?recordSubtotal(rec):null;
-  const heading=date?`<span class="history-date">${date}</span><span class="process-tag">${esc(worker.process)}</span>`:`<span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span>`;
+  const heading=date?`<span class="history-date">${date}</span><span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span>`:`<span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span>`;
   return `<article class="product-card"><header class="product-card-header">${heading}</header>${rec?`<div class="product-card-total"><span>${state==='待核实'?'已确认小计':'产量合计'}</span><strong>${subtotal===null?'—':numberText(subtotal)}<small>双</small></strong></div>${productGrid(rec.values.slice(0,6))}<footer class="product-card-footer"><span>产品数量 · 双</span>${statusHtml(state)}</footer>`:`<p class="empty-record">${statusHtml(state)}</p>`}</article>`;
 }
 function prepareFilters(workers,records){
