@@ -26,12 +26,12 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <h2 id="monthly-detail-title">每月生产明细</h2><p class="muted section-note">选择月份和员工，查看该月每天的完整记录；历史补核按日期单独显示。</p><div class="filter-bar"><div class="filter-field"><label for="detail-month">月份</label><select id="detail-month"></select></div><div class="filter-field"><label for="detail-worker">员工</label><select id="detail-worker"><option value="all">全部员工</option></select></div></div><div id="monthly-detail"></div>
 
 
-<h2 id="monthly-title">月产能汇总</h2><p class="muted section-note">切换月份查看每位员工的产品数量、合计和有效生产天数。</p><div class="filter-bar"><div class="filter-field"><label for="summary-month">统计月份</label><select id="summary-month"></select></div></div><div id="monthly-summary"></div>
+<h2 id="monthly-title">月产能汇总</h2><p class="muted section-note">切换月份和员工，查看个人或全部员工的月度汇总。</p><div class="filter-bar"><div class="filter-field"><label for="summary-month">统计月份</label><select id="summary-month"></select></div><div class="filter-field"><label for="summary-worker">员工</label><select id="summary-worker"><option value="all">全部员工</option></select></div></div><div id="monthly-summary"></div>
 
 
 <h2 id="history-title">员工生产明细</h2><p class="muted section-note">点开员工姓名查看全部历史记录。待核实数量不计入已确认产能。</p><div id="history"></div>
 
-<h2 id="period-title">2026年下半年累计产能</h2><p class="muted section-note">只累计当前台账已记录的数据，不把缺失月份当作0或全年产能。</p><div id="period-summary"></div>
+<h2 id="period-title">2026年下半年累计产能</h2><p class="muted section-note">选择员工查看个人或全部员工的下半年累计；缺失月份不当作0。</p><div class="filter-bar"><div class="filter-field"><label for="period-worker">员工</label><select id="period-worker"><option value="all">全部员工</option></select></div></div><div id="period-summary"></div>
 
 <p class="muted refresh-footer">每30秒刷新台账快照；腾讯云发布最新台账后，页面会在下次刷新时更新。<span id="next-refresh">下次刷新：30 秒</span></p>
 </main>
@@ -214,12 +214,18 @@ function prepareFilters(workers,records){
   const latest=[...new Set(records.map(r=>r.date.slice(0,7)))].sort().reverse()[0]||'2026-10';
   monthSelect.innerHTML=months.map(month=>`<option value="${month}">${monthLabel(month)}${records.some(r=>r.date.startsWith(month))?'':' · 无记录'}</option>`).join('');
   monthSelect.value=savedView('month',latest);if(!monthSelect.value)monthSelect.value=latest;
+  const summaryWorker=document.querySelector('#summary-worker');
+  summaryWorker.innerHTML='<option value="all">全部员工</option>'+workers.map(w=>`<option value="${esc(w.code)}">${esc(workerName(w))}</option>`).join('');
+  summaryWorker.value=savedView('summary-worker','all');
   const detailMonth=document.querySelector('#detail-month');
   detailMonth.innerHTML=months.map(month=>`<option value="${month}">${monthLabel(month)}${records.some(r=>r.date.startsWith(month))?'':' · 无记录'}</option>`).join('');
   detailMonth.value=savedView('detail-month',latest);if(!detailMonth.value)detailMonth.value=latest;
   const detailWorker=document.querySelector('#detail-worker');
   detailWorker.innerHTML='<option value="all">全部员工</option>'+workers.map(w=>`<option value="${esc(w.code)}">${esc(workerName(w))}</option>`).join('');
   detailWorker.value=savedView('detail-worker','all');
+  const periodWorker=document.querySelector('#period-worker');
+  periodWorker.innerHTML='<option value="all">全部员工</option>'+workers.map(w=>`<option value="${esc(w.code)}">${esc(workerName(w))}</option>`).join('');
+  periodWorker.value=savedView('period-worker','all');
 }
 
 function tableHead(includeProcess=true){
@@ -253,14 +259,18 @@ function renderCapacity(workers,records,statusMap){
   }).join('')}</div>`;
 }
 function renderPeriodSummary(workers,records,statusMap){
-  const rows=workers.map(worker=>aggregateRow(worker,aggregate(records.filter(r=>r.person===worker.person)),statusMap));
-  document.querySelector('#period-summary').innerHTML=`<div class="history-wrap desktop-view"><table class="summary-table">${tableHead(true)}<tbody>${rows.join('')}</tbody></table></div>`+summaryCards(workers,records,statusMap);
+  const code=document.querySelector('#period-worker').value;
+  const selected=code==='all'?workers:workers.filter(w=>w.code===code);
+  const rows=selected.map(worker=>aggregateRow(worker,aggregate(records.filter(r=>r.person===worker.person)),statusMap));
+  document.querySelector('#period-summary').innerHTML=`<div class="history-wrap desktop-view"><table class="summary-table">${tableHead(true)}<tbody>${rows.join('')}</tbody></table></div>`+summaryCards(selected,records,statusMap);
 }
 function monthLabel(month){return `${month.slice(0,4)}年${Number(month.slice(5,7))}月`;}
 function renderMonthlySummary(workers,records,statusMap){
   const month=document.querySelector('#summary-month').value;
-  const rows=workers.map(worker=>aggregateRow(worker,aggregate(records.filter(r=>r.person===worker.person&&r.date.startsWith(month))),statusMap,month));
-  document.querySelector('#monthly-summary').innerHTML=`<div class="history-wrap desktop-view"><table class="summary-table"><caption class="subsection">${monthLabel(month)}</caption>${tableHead(true)}<tbody>${rows.join('')}</tbody></table></div>`+summaryCards(workers,records,statusMap,month);
+  const code=document.querySelector('#summary-worker').value;
+  const selected=code==='all'?workers:workers.filter(w=>w.code===code);
+  const rows=selected.map(worker=>aggregateRow(worker,aggregate(records.filter(r=>r.person===worker.person&&r.date.startsWith(month))),statusMap,month));
+  document.querySelector('#monthly-summary').innerHTML=`<div class="history-wrap desktop-view"><table class="summary-table"><caption class="subsection">${monthLabel(month)}</caption>${tableHead(true)}<tbody>${rows.join('')}</tbody></table></div>`+summaryCards(selected,records,statusMap,month);
 }
 function renderMonthlyDetail(workers,records,statusMap){
   const month=document.querySelector('#detail-month').value, code=document.querySelector('#detail-worker').value;
@@ -318,15 +328,16 @@ function renderHistory(records,workers,statusMap){
   document.querySelectorAll('#history details').forEach(el=>el.addEventListener('toggle',()=>saveView('history-'+el.dataset.worker,el.open?'open':'closed')));
 }
 function bindDailyFilter(){
-  for(const [id,key] of [['daily-range','range'],['daily-worker','worker'],['summary-month','month'],['detail-month','detail-month'],['detail-worker','detail-worker']]){
+  for(const [id,key] of [['daily-range','range'],['daily-worker','worker'],['summary-month','month'],['summary-worker','summary-worker'],['detail-month','detail-month'],['detail-worker','detail-worker'],['period-worker','period-worker']]){
     const select=document.getElementById(id);
     if(select.dataset.bound)continue;
     select.dataset.bound='1';
     select.addEventListener('change',()=>{
       saveView(key,select.value);
       const {records,workers,statusMap}=window.__dashboardContext;
-      if(id==='summary-month')renderMonthlySummary(workers,records,statusMap);
+      if(id==='summary-month'||id==='summary-worker')renderMonthlySummary(workers,records,statusMap);
       else if(id==='detail-month'||id==='detail-worker')renderMonthlyDetail(workers,records,statusMap);
+      else if(id==='period-worker')renderPeriodSummary(workers,records,statusMap);
       else renderDaily(records,workers,statusMap);
     });
   }
