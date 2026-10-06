@@ -19,3 +19,26 @@ def preview(text, worker, day, supplied):
         if type(n) is not int or n<0: raise ValueError('数量必须为非负整数')
         values[p]=n
     return {'worker':worker,'production_date':day,'values':values,'total':sum(values.values()),'operation':'补齐原记录缺项，不新增批次','original':original}
+
+def apply_missing(text, worker, day, supplied, source, confirmation):
+    """Append only absent product details inside the existing date block."""
+    data=preview(text,worker,day,supplied)
+    headings=list(re.finditer(r'^### '+re.escape(day)+r'｜[^\n]+$',text,re.M))
+    matching=[h for h in headings if ('徐超超','梅芳','李鸿玉','张小翠')['ABCD'.index(worker)] in h.group()]
+    if len(matching)!=1: raise ValueError('个人日期记录不能唯一确定')
+    h=matching[0]; next_h=re.search(r'^#{2,3} ',text[h.end():],re.M)
+    end=h.end()+next_h.start() if next_h else len(text)
+    body=text[h.end():end]
+    for p in supplied:
+        if re.search(r'^\| 20\d{6}-'+worker+r'-\d{3} \| '+re.escape(p)+r' \|',body,re.M):
+            raise ValueError('目标产品已有明细，拒绝重复补齐')
+    ids=[int(x) for x in re.findall(r'20\d{6}-'+worker+r'-(\d{3})',text)]
+    n=max(ids,default=0)+1
+    rows=''.join(f'| {day.replace("-","")}-{worker}-{n+i:03d} | {p} | {supplied[p]} | 已确认（历史缺项补齐） |\n' for i,p in enumerate(supplied))
+    last=list(re.finditer(r'^\| 20\d{6}-'+worker+r'-\d{3}[^\n]+\n',body,re.M))
+    if not last: raise ValueError('原明细不存在')
+    pos=h.end()+last[-1].end()
+    after=text[:pos]+rows+text[pos:]
+    pos+=len(rows)
+    after=after[:pos]+f'\n历史缺项补齐来源：{source}；确认消息：{confirmation}\n'+after[pos:]
+    return after,data

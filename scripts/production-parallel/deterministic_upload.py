@@ -98,6 +98,8 @@ def _standard_report(task):
                    'values': values, 'worker': worker,
                    'name': WORKERS[worker][0], 'process': WORKERS[worker][1],
                    'missing_products': missing_products})
+    if extracted.get('historical_supplement'):
+        report['historical_supplement'] = extracted['historical_supplement']
     report['not_worked'] = bool(report.get('not_worked'))
     report['already_reported'] = bool(report.get('already_reported'))
     return inspected, report
@@ -994,7 +996,13 @@ def build_candidate(before, report, source, confirmation):
         if before.endswith('\n') and not after.endswith('\n'):
             after += '\n'
         return after
-    after = _insert_detail(before, worker, report, source, confirmation)
+    if report.get('historical_supplement'):
+        from historical_supplement import apply_missing
+        after, merged = apply_missing(before, worker, latest, report['historical_supplement'], source, confirmation)
+        if merged['values'] != report['values']:
+            raise ValueError('原记录已变化，请重新核对补核卡')
+    else:
+        after = _insert_detail(before, worker, report, source, confirmation)
     all_totals, all_dates = _records(after, worker)
     month_totals, month_dates = _records(after, worker, period)
     month_latest = max(month_dates)
