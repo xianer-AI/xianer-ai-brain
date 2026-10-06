@@ -165,3 +165,8 @@ class RecoveryIntegrationTests(unittest.TestCase):
     row=c.execute('SELECT * FROM blocked_message_fingerprints').fetchone()
     self.assertEqual(len(row['id_hash']),64);self.assertNotIn('om_retired',str(tuple(row)))
    self.assertEqual(q.put(db,dict(bad,messageId='om_fresh')), 'om_fresh')
+ def test_zero_only_partial_without_date_is_not_a_zero_production_day(self):
+  from historical_supplement import require_bound_supplement
+  for raw in ['c 过膝袜0','过膝袜、女船袜、男船袜都为零','生产补报 3 B 2026-09-20']:
+   with self.assertRaisesRegex(ValueError,'不能生成全零'):
+    require_bound_supplement({'event':{'content':raw},'result':{'extracted':{'items':[{'product':p,'quantity':0} for p in writer.PRODUCTS]}}})
