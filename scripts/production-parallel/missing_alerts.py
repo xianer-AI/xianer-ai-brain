@@ -14,6 +14,8 @@ import fcntl
 import hashlib
 import json
 import subprocess
+import sqlite3
+import time
 import uuid
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -27,6 +29,7 @@ BACKFILL_CARD_VERSION = 'V1.17-CARD-6'
 DEFAULT_DB = str(Path.home() / '.openclaw/state/production-parallel/inbox.sqlite')
 STATUS_SNAPSHOT_NAME = 'pending_status.json'
 SYNC_HEARTBEAT_SECONDS = 5 * 60
+REVIEW_STATUS_READ_DELAYS = (0.2, 0.5)
 
 
 def _platform_status(db: str) -> dict[str, str]:
@@ -284,18 +287,51 @@ def refresh_status_snapshot(db: str = DEFAULT_DB, *, now: dt.datetime | None = N
     return snapshot
 
 
+def _review_status_rows(db: str) -> list[tuple[str, str]]:
+    """Read one bounded snapshot and close every connection before retrying.
+
+    This read shares the WAL database with the service's writer transactions.
+    Only transient open/lock errors are retried; a failed read must propagate
+    rather than being rendered as an empty business queue.
+    """
+    database = Path(db).expanduser().resolve()
+    uri = database.as_uri() + '?mode=ro'
+    for attempt in range(len(REVIEW_STATUS_READ_DELAYS) + 1):
+        connection = None
+        try:
+            connection = sqlite3.connect(uri, uri=True, timeout=20)
+            return connection.execute(
+                "SELECT summary, delivery FROM review_cards "
+                "WHERE state='pending' AND card_kind='production'"
+            ).fetchall()
+        except sqlite3.OperationalError as exc:
+            transient = str(exc).lower() in {
+                'unable to open database file',
+                'database is locked',
+                'database table is locked',
+            }
+            if not transient or attempt == len(REVIEW_STATUS_READ_DELAYS):
+                raise RuntimeError(
+                    f'核对卡状态读取失败（{database}）：{exc}'
+                ) from exc
+        finally:
+            if connection is not None:
+                connection.close()
+        time.sleep(REVIEW_STATUS_READ_DELAYS[attempt])
+    raise AssertionError('unreachable review status read')
+
+
 def review_status_section(db: str, year: int) -> str:
     """Publish only display fields from active cards; never expose callback tokens."""
-    import sqlite3, re
+    import re
     rows = []
-    with sqlite3.connect(f'file:{db}?mode=ro', uri=True) as conn:
-        for summary, delivery in conn.execute("SELECT summary, delivery FROM review_cards WHERE state='pending' AND card_kind='production'"):
-            person = re.search(r'身份：([A-D])=([^\s]+)', summary or '')
-            date = re.search(r'生产日：(20\d{2}-\d{2}-\d{2})', summary or '')
-            if not person or not date or not date[1].startswith(str(year)): continue
-            products = re.findall(r'^(棉堆堆袜|冰冰袜|小腿袜|过膝袜|女船袜|男船袜)：', summary, re.M)
-            state = '核对卡已发送，等待回复' if delivery == 'sent' else '核对卡待发送'
-            rows.append(f'| {person[1]}｜{person[2]} | {date[1]} | {state} | {"、".join(products)} |')
+    for summary, delivery in _review_status_rows(db):
+        person = re.search(r'身份：([A-D])=([^\s]+)', summary or '')
+        date = re.search(r'生产日：(20\d{2}-\d{2}-\d{2})', summary or '')
+        if not person or not date or not date[1].startswith(str(year)): continue
+        products = re.findall(r'^(棉堆堆袜|冰冰袜|小腿袜|过膝袜|女船袜|男船袜)：', summary, re.M)
+        state = '核对卡已发送，等待回复' if delivery == 'sent' else '核对卡待发送'
+        rows.append(f'| {person[1]}｜{person[2]} | {date[1]} | {state} | {"、".join(products)} |')
     return '\n### 核对卡业务状态\n\n| 人员 | 生产日期 | 业务状态 | 产品 |\n|---|---|---|---|\n' + ('\n'.join(sorted(set(rows))) if rows else '| — | — | 当前无待回复核对卡 | — |') + '\n'
 
 
