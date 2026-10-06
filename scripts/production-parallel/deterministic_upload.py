@@ -133,6 +133,24 @@ def _next_ids(section, worker, date):
     return [f'{date.replace("-", "")}-{worker}-{begin + offset:03d}' for offset in range(6)]
 
 
+def _employee_append_position(section):
+    """Keep appended employee blocks inside an inherited details wrapper.
+
+    The final employee section can contain the closing tag of the enclosing
+    history appendix. Its local, balanced personal wrappers are skipped; the
+    first closing tag without a local opener belongs to the outer appendix.
+    """
+    depth = 0
+    for tag in re.finditer(r'<details(?:\s[^>]*)?>|</details>', section, re.I):
+        if tag.group().lower().startswith('</'):
+            if depth == 0:
+                return tag.start()
+            depth -= 1
+        else:
+            depth += 1
+    return len(section)
+
+
 def _has_valid_detail_record(section, worker, date):
     """Return whether a date subsection contains an effective detail row.
 
@@ -194,9 +212,8 @@ def _insert_detail(text, worker, report, source, confirmation):
              f'{rows}\n\n{note}\n\n来源消息：{source}\n\n确认消息：{confirmation}\n\n'
              f'上报日期时间（UTC）：{now}\n\n')
     marker = section.find('\n### ')
-    if marker < 0:
-        marker = len(section)
-    section = section[:marker + 1] + block + section[marker + 1:]
+    insert_at = marker + 1 if marker >= 0 else _employee_append_position(section)
+    section = section[:insert_at].rstrip() + '\n\n' + block + section[insert_at:]
     return text[:start] + section + text[end:]
 
 
@@ -417,7 +434,9 @@ def _update_personal(text, worker, totals, latest, missing_products=None):
         # known.  Append a new month-scoped section inside this employee's
         # detail area instead of failing with a generic upload error.
         block = _personal_block(worker, totals, latest, missing_products)
-        return text[:start] + section.rstrip() + '\n\n' + block + text[end:]
+        insert_at = _employee_append_position(section)
+        return (text[:start] + section[:insert_at].rstrip() + '\n\n' + block
+                + section[insert_at:] + text[end:])
     stop_candidates = [value for value in (
         section.find('\n</details>', pos),
         section.find('\n### ', pos + len(marker)),
@@ -945,18 +964,26 @@ def _update_log(text, report, source, confirmation):
         if modern_header:
             row = (f'| {report["production_date"]} | 确认状态 {report["worker"]} | '
                    f'{report["name"]}（{report["worker"]}）{report["process"]}：{status_label}，不计入生产统计；'
-                   f'来源消息：{source}；确认消息：{confirmation}；保留出勤核实状态，未写入生产明细或累计 | 待同步 |\n')
+                   f'来源消息：{source}；确认消息：{confirmation}；保留出勤核实状态，未写入生产明细或累计 | 见本次成功回执 |\n')
         else:
             row = (f'| {report["production_date"]} | 确认状态 {report["worker"]} | '
                    f'{report["name"]}（{report["worker"]}）{report["process"]}：{status_label}，不计入生产统计；'
                    f'来源消息：{source}；确认消息：{confirmation}；保留出勤核实状态，未写入生产明细或累计 |\n')
         return text[:separator] + row + text[separator:]
+    year_month = f'{report["year"]}年{report["month"]}月'
+    action = '补报并上传' if report.get('backfill') else '上传'
+    if modern_header:
+        # The audit appendix records the event and its proof; production
+        # quantities remain in the employee/daily/monthly/annual views.
+        row = (f'| {report["production_date"]} | {action} {report["worker"]} 当日已确认报数 | '
+               f'{report["name"]}（{report["worker"]}）{report["process"]}；'
+               f'来源消息：{source}；确认消息：{confirmation}；'
+               f'同步更新{year_month}个人月度、每日汇总、月度与年度累计 | 见本次成功回执 |\n')
+        return text[:separator] + row + text[separator:]
     detail = '、'.join(f'{p}{values[p]}' for p in PRODUCTS)
     missing = set(report.get('missing_products') or ())
     missing_note = ('；原始未报项：' + '、'.join(p for p in PRODUCTS if p in missing) +
                     '，经本人“准确”确认按0双入账') if missing else ''
-    year_month = f'{report["year"]}年{report["month"]}月'
-    action = '补报并上传' if report.get('backfill') else '上传'
     row = (f'| {report["production_date"]} | {action} {report["worker"]} 当日已确认报数 | '
            f'{report["name"]}（{report["worker"]}）{report["process"]}：{detail}双，合计{sum(values.values())}双{missing_note}；'
            f'来源消息：{source}；确认消息：{confirmation}；同步更新{year_month}月度、当日日报及对应年度累计 |\n')

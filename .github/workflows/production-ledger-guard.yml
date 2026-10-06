@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
+      - '袜子生产制造袜子厂/库存记录/2027全年下机白胚半成品统计.md'
       - '袜子生产制造袜子厂/guard_production_ledger.py'
       - '袜子生产制造袜子厂/production_summary_guard.py'
       - '袜子生产制造袜子厂/test_production_summary_guard.py'
@@ -11,6 +12,7 @@ on:
     branches: [main]
     paths:
       - '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
+      - '袜子生产制造袜子厂/库存记录/2027全年下机白胚半成品统计.md'
       - '袜子生产制造袜子厂/guard_production_ledger.py'
       - '袜子生产制造袜子厂/production_summary_guard.py'
       - '袜子生产制造袜子厂/test_production_summary_guard.py'
@@ -31,17 +33,22 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          LEDGER='袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
           if [ "$EVENT" = "pull_request" ]; then
             BASE="$(git merge-base "$BASE_REF" HEAD)"
           else
             BASE="$BEFORE"
           fi
-          git show "$BASE:$LEDGER" > /tmp/production-ledger-before.md
-          python3 '袜子生产制造袜子厂/guard_production_ledger.py' /tmp/production-ledger-before.md "$LEDGER"
+          for LEDGER in \
+            '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md' \
+            '袜子生产制造袜子厂/库存记录/2027全年下机白胚半成品统计.md'; do
+            git show "$BASE:$LEDGER" > /tmp/production-ledger-before.md
+            python3 '袜子生产制造袜子厂/guard_production_ledger.py' /tmp/production-ledger-before.md "$LEDGER"
+          done
       - name: 校验每日汇总与生产明细一致
         run: |
           set -euo pipefail
           python3 '袜子生产制造袜子厂/production_summary_guard.py' \
             '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
+          python3 '袜子生产制造袜子厂/production_summary_guard.py' \
+            '袜子生产制造袜子厂/库存记录/2027全年下机白胚半成品统计.md'
           python3 -m unittest '袜子生产制造袜子厂/test_production_summary_guard.py'

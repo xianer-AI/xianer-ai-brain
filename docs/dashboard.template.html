@@ -31,10 +31,11 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 </style>
 <style>.banner.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}.banner.checking{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}</style>
 <main>
-<h1>袜子生产统计工作台</h1><div class="sub">2026 年下半年 · 单位：双</div>
+<h1>袜子生产统计工作台</h1><div class="sub" id="period-label">2026 年下半年 · 单位：双</div>
+<div class="filter-bar"><div class="filter-field"><label for="dashboard-year">统计年度</label><select id="dashboard-year"><option value="2026">2026年下半年</option><option value="2027">2027年全年</option></select></div></div>
 <nav class="section-nav" aria-label="产能导航"><a href="#daily-title">每日产能</a><a href="#monthly-title">月产能汇总</a><a href="#monthly-detail-title">每月明细</a><a href="#history-title">员工明细</a><a href="#period-title">累计产能</a></nav>
 <div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div>
-<details class="sync-panel" id="sync-panel"><summary><span>同步详情</span><span class="sync-caption">GitHub · OpenClaw · 飞书 · 手机网页</span></summary><table class="sync-table"><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table></details>
+<details class="sync-panel" id="sync-panel"><summary><span>同步详情</span><span class="sync-caption">GitHub · OpenClaw · 飞书 · 手机网页</span></summary><table class="sync-table"><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><p class="muted section-note">同步状态反映当前系统任务；生产数据和核对卡按所选年度分别统计。</p></details>
 <h2 id="overview-title">产能总览</h2><p class="muted section-note">按员工和工序分别统计，每个人单独计算。</p><div id="capacity"></div>
 <h2 id="daily-title">每日生产产品明细</h2><p class="muted section-note">默认显示最近3个记录日期。未上班、待核实和无记录分别标注，不当作0。</p>
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
@@ -48,13 +49,22 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 
 <h2 id="history-title">员工生产明细</h2><p class="muted section-note">点开员工姓名查看全部历史记录。待核实数量不计入已确认产能。</p><div id="history"></div>
 
-<h2 id="period-title">2026年下半年累计产能</h2><p class="muted section-note">选择员工查看个人或全部员工的下半年累计；缺失月份不当作0。</p><div class="filter-bar"><div class="filter-field"><label for="period-worker">员工</label><select id="period-worker"><option value="all">全部员工</option></select></div></div><div id="period-summary"></div>
+<h2 id="period-title">2026年下半年累计产能</h2><p class="muted section-note" id="period-note">选择员工查看个人或全部员工的下半年累计；缺失月份不当作0。</p><div class="filter-bar"><div class="filter-field"><label for="period-worker">员工</label><select id="period-worker"><option value="all">全部员工</option></select></div></div><div id="period-summary"></div>
 
 <p class="muted refresh-footer">手机和电脑读取同一份已发布台账，每30秒核查网站版本；发现新快照后自动更新。网络异常时保留当前数据并提示。<span id="next-refresh">下次核查：30 秒</span></p>
 </main>
 <script>
-let md=window.__LEDGER__||'';
 const dashboardRelease=window.__DASHBOARD_RELEASE__||{};
+const annualLedgers=window.__LEDGERS__||{'2026':window.__LEDGER__||''};
+const PERIODS={'2026':{firstMonth:7,label:'2026 年下半年',title:'2026年下半年累计产能',scope:'下半年'},'2027':{firstMonth:1,label:'2027 年全年',title:'2027年全年累计产能',scope:'全年'}};
+function availableYears(){return Object.keys(PERIODS).filter(year=>annualLedgers[year]);}
+function chooseYear(years,address,saved,currentYear){
+  const requested=new URL(address).searchParams.get('year');
+  return years.includes(requested)?requested:years.includes(saved)?saved:years.includes(String(currentYear))?String(currentYear):years[0];
+}
+function savedYear(){try{return localStorage.getItem('production-dashboard-year');}catch{return null;}}
+let activeYear=chooseYear(availableYears(),location.href,savedYear(),new Date().getFullYear());
+let md=annualLedgers[activeYear]||'';
 let websiteVerification='checking',websiteCheckedAt=null,websiteCheckInFlight=false;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cn=t=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(t).replaceAll('/','-');
@@ -176,7 +186,7 @@ function parseStatusMap(){
     const m=line.match(/\|\s*([^|]+?)\s*\|\s*(20\d{2})年(\d{1,2})月(\d{1,2})日\s*\|\s*([^|]+?)\s*\|/);
     if(m){
       const date=`${m[2]}-${String(m[3]).padStart(2,'0')}-${String(m[4]).padStart(2,'0')}`;
-      map.set(`${date}|${m[1].trim()}`,m[5].trim());
+      if(inSelectedPeriod(date))map.set(`${date}|${m[1].trim()}`,m[5].trim());
     }
   }
   return map;
@@ -185,6 +195,7 @@ function parseRecords(){
   const recordMap=new Map();
   const dateBlocks=[...md.matchAll(/####\s+(20\d{2}-\d{2}-\d{2})([\s\S]*?)(?=\n#{2,}\s|\n<a id=|$)/g)];
   for(const d of dateBlocks){
+    if(!inSelectedPeriod(d[1]))continue;
     if(!d[2].includes('| 人员 | 工序 |'))continue;
     for(const r of d[2].matchAll(/\|\s*([^|]+)\s*\|\s*(下机|烤边)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/g)){
       const rec={date:d[1],person:r[1].trim(),process:r[2],values:r.slice(3).map(x=>x.trim())};
@@ -239,8 +250,38 @@ function statusCounts(statusMap,person,month){
   return {absent,pending};
 }
 
-function savedView(key,fallback){try{return sessionStorage.getItem('production-view-'+key)||fallback;}catch{return fallback;}}
-function saveView(key,value){try{sessionStorage.setItem('production-view-'+key,value);}catch{}}
+function inSelectedPeriod(date){return date.startsWith(activeYear+'-')&&Number(date.slice(5,7))>=PERIODS[activeYear].firstMonth;}
+function viewKey(key,year=activeYear){return 'production-view-'+year+'-'+key;}
+function savedView(key,fallback){
+  try{const value=localStorage.getItem(viewKey(key));if(value)return value;}catch{}
+  try{return sessionStorage.getItem(viewKey(key))||(activeYear==='2026'?sessionStorage.getItem('production-view-'+key):null)||fallback;}catch{return fallback;}
+}
+function saveView(key,value,year=activeYear){
+  try{localStorage.setItem(viewKey(key,year),value);}catch{}
+  try{sessionStorage.setItem(viewKey(key,year),value);}catch{}
+}
+function monthsForYear(year){return Array.from({length:13-PERIODS[year].firstMonth},(_,index)=>`${year}-${String(12-index).padStart(2,'0')}`);}
+function defaultMonth(year,records,statusMap,now=new Date()){
+  const months=monthsForYear(year);
+  const recorded=[...new Set([...records.map(r=>r.date.slice(0,7)),...[...statusMap.keys()].map(k=>k.slice(0,7))])].filter(month=>months.includes(month)).sort().reverse();
+  if(recorded.length)return recorded[0];
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit'}).formatToParts(now);
+  const currentYear=Number(parts.find(part=>part.type==='year').value);
+  if(Number(year)>currentYear)return months[months.length-1];
+  if(Number(year)<currentYear)return months[0];
+  const currentMonth=Number(parts.find(part=>part.type==='month').value);
+  return `${year}-${String(Math.max(PERIODS[year].firstMonth,currentMonth)).padStart(2,'0')}`;
+}
+function selectDashboardYear(year){
+  if(!availableYears().includes(year)||year===activeYear)return;
+  saveView('scroll',String(window.scrollY));
+  activeYear=year;md=annualLedgers[year];
+  try{localStorage.setItem('production-dashboard-year',year);}catch{}
+  const address=new URL(location.href);address.searchParams.set('year',year);address.searchParams.delete('_sync');
+  history.replaceState(null,'',address.href);
+  refresh();
+  requestAnimationFrame(()=>window.scrollTo(0,Number(savedView('scroll','0'))));
+}
 function workerName(worker){return worker.person.replace(/^[A-D][｜|]\s*/,'');}
 function quantity(v){const n=numeric(v);return n===null?esc(v??'—'):numberText(n);}
 function productGrid(values){
@@ -263,14 +304,14 @@ function recordCard(worker,rec,state,date=''){
   const heading=date?`<span class="history-date">${date}</span><span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span>`:`<span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span>`;
   return `<article class="product-card"><header class="product-card-header">${heading}</header>${rec?`<div class="product-card-total"><span>${state==='待核实'?'已确认小计':'产量合计'}</span><strong>${subtotal===null?'—':numberText(subtotal)}<small>双</small></strong></div>${productGrid(rec.values.slice(0,6))}<footer class="product-card-footer"><span>产品数量 · 双</span>${statusHtml(state)}</footer>`:`<p class="empty-record">${statusHtml(state)}</p>`}</article>`;
 }
-function prepareFilters(workers,records){
+function prepareFilters(workers,records,statusMap){
   const workerSelect=document.querySelector('#daily-worker');
   workerSelect.innerHTML='<option value="all">全部员工</option>'+workers.map(w=>`<option value="${esc(w.code)}">${esc(workerName(w))} · ${esc(w.process)}</option>`).join('');
   workerSelect.value=savedView('worker','all');if(!workerSelect.value)workerSelect.value='all';
   const range=document.querySelector('#daily-range');range.value=savedView('range','3');if(!range.value)range.value='3';
   const monthSelect=document.querySelector('#summary-month');
-  const months=['2026-12','2026-11','2026-10','2026-09','2026-08','2026-07'];
-  const latest=[...new Set(records.map(r=>r.date.slice(0,7)))].sort().reverse()[0]||'2026-10';
+  const months=monthsForYear(activeYear);
+  const latest=defaultMonth(activeYear,records,statusMap);
   monthSelect.innerHTML=months.map(month=>`<option value="${month}">${monthLabel(month)}${records.some(r=>r.date.startsWith(month))?'':' · 无记录'}</option>`).join('');
   monthSelect.value=savedView('month',latest);if(!monthSelect.value)monthSelect.value=latest;
   const summaryWorker=document.querySelector('#summary-worker');
@@ -332,13 +373,19 @@ function renderMonthlySummary(workers,records,statusMap){
   document.querySelector('#monthly-summary').innerHTML=`<div class="history-wrap desktop-view"><table class="summary-table"><caption class="subsection">${monthLabel(month)}</caption>${tableHead(true)}<tbody>${rows.join('')}</tbody></table></div>`+summaryCards(selected,records,statusMap,month);
 }
 function renderMonthlyDetail(workers,records,statusMap){
+  const viewYear=activeYear;
   const month=document.querySelector('#detail-month').value, code=document.querySelector('#detail-worker').value;
   const selected=code==='all'?workers:workers.filter(w=>w.code===code);
   const dates=[...new Set([...records.filter(r=>r.date.startsWith(month)).map(r=>r.date),...[...statusMap.keys()].map(k=>k.split('|')[0]).filter(d=>d.startsWith(month))])].sort().reverse();
   const byKey=new Map(records.map(r=>[`${r.date}|${r.person}`,r]));
   const expandRecent=window.matchMedia('(min-width:701px)').matches;
-  const groups=dates.map((date,index)=>`<details class="day-fold"${expandRecent&&index<5?' open':''}><summary class="day-heading"><span>${date}</span><span>点击展开</span></summary><div class="monthly-day-table desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${makeDailyRows(records,selected,statusMap,[date]).join('')}</tbody></table></div><section class="day-group">${selected.map(worker=>{const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);return recordCard(worker,rec,state,date);}).join('')}</section></details>`).join('');
+  const foldPrefix=expandRecent?'monthly-desktop-':'monthly-mobile-';
+  const groups=dates.map((date,index)=>{
+    const open=savedView(foldPrefix+date,expandRecent&&index<5?'open':'closed')==='open';
+    return `<details class="day-fold" data-date="${date}"${open?' open':''}><summary class="day-heading"><span>${date}</span><span>点击展开</span></summary><div class="monthly-day-table desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${makeDailyRows(records,selected,statusMap,[date]).join('')}</tbody></table></div><section class="day-group">${selected.map(worker=>{const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);return recordCard(worker,rec,state,date);}).join('')}</section></details>`;
+  }).join('');
   document.querySelector('#monthly-detail').innerHTML=groups||'<p class="muted">该月份暂无对应明细</p>';
+  document.querySelectorAll('#monthly-detail>.day-fold').forEach(el=>el.addEventListener('toggle',()=>saveView(foldPrefix+el.dataset.date,el.open?'open':'closed',viewYear)));
 }
 function makeDailyRows(records,workers,statusMap,dates){
   const byKey=new Map(records.map(r=>[`${r.date}|${r.person}`,r]));
@@ -369,6 +416,7 @@ function renderDaily(records,workers,statusMap){
   document.querySelector('#daily').innerHTML=rows.length?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows.join('')}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无每日记录</p>';
 }
 function renderHistory(records,workers,statusMap){
+  const viewYear=activeYear;
   const allDates=[...new Set([...records.map(r=>r.date),...[...statusMap.keys()].map(k=>k.split('|')[0])])].sort().reverse();
   const byKey=new Map(records.map(r=>[`${r.date}|${r.person}`,r]));
   document.querySelector('#history').innerHTML=`<div class="employee-details">${workers.map(worker=>{
@@ -384,7 +432,7 @@ function renderHistory(records,workers,statusMap){
     const open=savedView((window.matchMedia('(max-width:700px)').matches?'history-':'desktop-history-')+worker.code,'closed')==='open';
     return `<details data-worker="${worker.code}"${open?' open':''}><summary>${esc(workerName(worker))} · ${esc(worker.process)}<span class="history-caption">已确认 ${numberText(agg.total)} 双 · ${dates.length} 条历史记录</span></summary>${rows?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无记录</p>'}</details>`;
   }).join('')}</div>`;
-  document.querySelectorAll('#history details').forEach(el=>el.addEventListener('toggle',()=>saveView((window.matchMedia('(max-width:700px)').matches?'history-':'desktop-history-')+el.dataset.worker,el.open?'open':'closed')));
+  document.querySelectorAll('#history details').forEach(el=>el.addEventListener('toggle',()=>saveView((window.matchMedia('(max-width:700px)').matches?'history-':'desktop-history-')+el.dataset.worker,el.open?'open':'closed',viewYear)));
 }
 function bindDailyFilter(){
   for(const [id,key] of [['daily-range','range'],['daily-worker','worker'],['summary-month','month'],['summary-worker','summary-worker'],['detail-month','detail-month'],['detail-worker','detail-worker'],['period-worker','period-worker']]){
@@ -402,12 +450,19 @@ function bindDailyFilter(){
   }
   const sync=document.querySelector('#sync-panel');
   sync.open=savedView('sync','closed')==='open';
-  sync.addEventListener('toggle',()=>saveView('sync',sync.open?'open':'closed'));
+  if(!sync.dataset.bound){sync.dataset.bound='1';sync.addEventListener('toggle',()=>saveView('sync',sync.open?'open':'closed'));}
+  const yearSelect=document.querySelector('#dashboard-year');
+  if(!yearSelect.dataset.bound){yearSelect.dataset.bound='1';yearSelect.addEventListener('change',()=>selectDashboardYear(yearSelect.value));}
 }
 function refresh(){
   const now=new Date();
   try{
     if(!md)throw Error('台账内容未嵌入');
+    const period=PERIODS[activeYear],yearSelect=document.querySelector('#dashboard-year');
+    yearSelect.innerHTML=availableYears().map(year=>`<option value="${year}">${PERIODS[year].label.replaceAll(' ','')}</option>`).join('');yearSelect.value=activeYear;
+    document.querySelector('#period-label').textContent=`${period.label} · 单位：双`;
+    document.querySelector('#period-title').textContent=period.title;
+    document.querySelector('#period-note').textContent=`选择员工查看个人或全部员工的${period.scope}累计；缺失月份不当作0。`;
     const syncRows=syncRowsFromLedger();
     const stamp=syncRows[0]?.time||(md.match(/最后同步\s*\|\s*([^|]+)/)||[])[1]?.trim()||'台账未记录';
     document.querySelector('#freshness').innerHTML=`<span>台账快照：${esc(stamp)}</span><span>网页生成：${esc(dashboardRelease.generated_at?cn(new Date(dashboardRelease.generated_at)):'未记录')}</span>`;
@@ -427,7 +482,7 @@ function refresh(){
     renderSyncBanner();
     const workers=parseWorkers(), statusMap=parseStatusMap(), records=parseRecords();
     window.__dashboardContext={workers,statusMap,records};
-    prepareFilters(workers,records);
+    prepareFilters(workers,records,statusMap);
     renderCapacity(workers,records,statusMap);
     renderPeriodSummary(workers,records,statusMap);
     renderMonthlySummary(workers,records,statusMap);

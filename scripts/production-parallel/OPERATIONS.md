@@ -8,6 +8,7 @@
 - 网络或远程 SHA 冲突按同一确认批次退避恢复，不新增任务、不要求员工反复报数；固定业务校验失败保持暂停。GitHub 已验证后只补发缺失成功回执，不能再次写入。
 - 手机和电脑使用同一个发布网站与正式 GitHub 台账。每30秒检查发布标识；显示规则版本、数据快照和更新检查状态，页面刷新时间不能代替数据更新时间。发布后必须线上回读匹配，失败不能显示正常或发布成功。
 - 手机入口：https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html
+- 2027全年入口：https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html?year=2027；手机和电脑可切换年度，2027支持1—12月、单人/全部员工查询与实时发布。报数、补报和历史补核按明确生产日期进入对应年度台账，2026数量不迁入2027；页面切换不改变入账年度。
 
 
 # 小文CEO与Hermes元宝生产统计协作

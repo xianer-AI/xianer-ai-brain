@@ -134,6 +134,8 @@ def main() -> int:
             'workbench_version': release['workbench_version'],
             'rules_release_id': release['rules_release_id'],
             'ledger_sha256': release['ledger_sha256'],
+            'ledgers_sha256': release['ledgers_sha256'],
+            'available_years': release['available_years'],
             'version_sha256': release['version_sha256'],
             'verification': 'public_readback_passed',
         })

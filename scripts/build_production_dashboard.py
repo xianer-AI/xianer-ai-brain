@@ -11,6 +11,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / 'docs/dashboard.template.html'
 LEDGER = ROOT / '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
+LEDGERS = {
+    '2026': LEDGER,
+    '2027': ROOT / '袜子生产制造袜子厂/库存记录/2027全年下机白胚半成品统计.md',
+}
 VERSION = ROOT / 'scripts/production-parallel/VERSION.json'
 
 
@@ -24,7 +28,7 @@ def script_json(value: object) -> str:
 
 
 def render_snapshot(template: str, ledger: str, version: dict, *, generated_at: str | None = None,
-                    builder_hash: str = '') -> tuple[bytes, bytes, dict]:
+                    builder_hash: str = '', ledgers: dict[str, str] | None = None) -> tuple[bytes, bytes, dict]:
     if template.count('<script>') != 1:
         raise ValueError('dashboard template must have exactly one script injection point')
     required = ('workbench_version', 'sync_protocol_version', 'card_protocol_version')
@@ -33,9 +37,17 @@ def render_snapshot(template: str, ledger: str, version: dict, *, generated_at: 
     release_id = version.get('release_id') or version.get('github_commit')
     if not release_id:
         raise ValueError('formal rules release identifier is missing')
+    annual_ledgers = {'2026': ledger} if ledgers is None else dict(ledgers)
+    if annual_ledgers.get('2026') != ledger:
+        raise ValueError('legacy 2026 ledger must match the annual snapshot')
+    if any(not year.isdigit() or len(year) != 4 or not text.strip()
+           for year, text in annual_ledgers.items()):
+        raise ValueError('annual ledger snapshot is incomplete')
     source = {
         'template_sha256': sha256(template.encode('utf-8')),
         'ledger_sha256': sha256(ledger.encode('utf-8')),
+        'ledgers_sha256': {year: sha256(text.encode('utf-8'))
+                           for year, text in sorted(annual_ledgers.items())},
         'version_sha256': sha256(json.dumps(version, sort_keys=True, ensure_ascii=False).encode('utf-8')),
         'builder_sha256': builder_hash,
     }
@@ -46,9 +58,12 @@ def render_snapshot(template: str, ledger: str, version: dict, *, generated_at: 
         **{field: version[field] for field in required},
         'rules_release_id': release_id,
         'release_status': version.get('release_status', '正式'),
+        'available_years': sorted(annual_ledgers),
         'generated_at': generated_at or datetime.now(timezone.utc).isoformat(timespec='seconds'),
     }
-    bootstrap = f'<script>window.__LEDGER__={script_json(ledger)};window.__DASHBOARD_RELEASE__={script_json(release)};'
+    bootstrap = (f'<script>window.__LEDGER__={script_json(ledger)};'
+                 f'window.__LEDGERS__={script_json(annual_ledgers)};'
+                 f'window.__DASHBOARD_RELEASE__={script_json(release)};')
     html = template.replace('<script>', bootstrap, 1).encode('utf-8')
     manifest = (json.dumps(release, ensure_ascii=False, sort_keys=True, indent=2) + '\n').encode('utf-8')
     return html, manifest, release
@@ -56,9 +71,10 @@ def render_snapshot(template: str, ledger: str, version: dict, *, generated_at: 
 
 def capture_snapshot() -> tuple[bytes, bytes, dict]:
     # Hash the exact bytes read into this snapshot; do not hash and reread later.
-    return render_snapshot(TEMPLATE.read_text(encoding='utf-8'), LEDGER.read_text(encoding='utf-8'),
+    ledgers = {year: path.read_text(encoding='utf-8') for year, path in LEDGERS.items()}
+    return render_snapshot(TEMPLATE.read_text(encoding='utf-8'), ledgers['2026'],
                            json.loads(VERSION.read_text(encoding='utf-8')),
-                           builder_hash=sha256(Path(__file__).read_bytes()))
+                           builder_hash=sha256(Path(__file__).read_bytes()), ledgers=ledgers)
 
 
 def main() -> int:
