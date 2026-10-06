@@ -291,3 +291,16 @@ class ProductionStatusRegressionTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class RevokedTotalsTests(unittest.TestCase):
+    def test_revoked_rows_do_not_affect_totals_or_dates(self):
+        text = "## C｜李鸿玉烤边\n" + "\n".join([
+            "| 20260921-C-001 | 棉堆堆袜 | 4800 | 已撤销（重复） |",
+            "| 20260922-C-002 | 冰冰袜 | 7000 | 已作废 |",
+            "| 20261006-C-003 | 棉堆堆袜 | 4600 | 已确认 |",
+        ])
+        totals, dates = uploader._records(text, 'C')
+        self.assertEqual(totals['棉堆堆袜'], 4600)
+        self.assertEqual(totals['冰冰袜'], 0)
+        self.assertEqual(dates, {'2026-10-06'})

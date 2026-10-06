@@ -270,10 +270,12 @@ def _attendance_status_map(text):
 def _records(text, worker, period=None):
     start, end = _detail_bounds(text, worker)
     section = text[start:end]
-    row_re = re.compile(r'^\| (20\d{6}-' + worker + r'-\d{3}) \| ([^|]+) \| (\d+) \| [^|]+ \|$', re.M)
+    row_re = re.compile(r'^\| (20\d{6}-' + worker + r'-\d{3}) \| ([^|]+) \| (\d+) \| ([^|]+) \|$', re.M)
     totals = {product: 0 for product in PRODUCTS}
     dates = set()
     for match in row_re.finditer(section):
+        if any(marker in match.group(4) for marker in ("撤销", "作废")):
+            continue
         product = match.group(2).strip()
         if product not in totals:
             continue
