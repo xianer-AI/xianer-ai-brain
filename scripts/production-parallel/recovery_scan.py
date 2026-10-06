@@ -162,6 +162,20 @@ def deliver(db):
         for row in rows:
             is_reminder = row['delivery'] == 'sent'
             resend_count = int(row['resend_count'] or 0)
+            # A recalled Feishu card is an explicit operator decision. Close
+            # the durable task before recovery can resend it; recalling the
+            # visible message alone must never resurrect an old date/employee
+            # task.
+            if is_reminder and row['message_id']:
+                try:
+                    current = request('xiaowen', 'GET', f"/im/v1/messages/{row['message_id']}")
+                    item = (current.get('data') or {}).get('items', [{}])[0]
+                    if item.get('deleted'):
+                        c.execute("UPDATE review_cards SET state='superseded', delivery_error=? WHERE token=?", ('Feishu card recalled; task closed', row['token']))
+                        continue
+                except Exception:
+                    # An uncertain lookup must not close or resend the task.
+                    continue
             if is_reminder and resend_count >= len(REMINDER_DELAYS):
                 continue
             token = row['token'] if not is_reminder else f"{row['token']}:reminder:{resend_count + 1}"
