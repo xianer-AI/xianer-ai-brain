@@ -302,10 +302,10 @@ function renderDaily(records,workers,statusMap){
   const selected=code==='all'?workers:workers.filter(w=>w.code===code);
   const rows=makeDailyRows(records,selected,statusMap,dates);
   const byKey=new Map(records.map(r=>[`${r.date}|${r.person}`,r]));
-  const mobile=dates.map(date=>`<details class="day-fold"><summary class="day-heading">${date}<span>${selected.length}位员工 · 点击查看产品明细</span></summary><section class="day-group">${selected.map(worker=>{
+  const mobile=dates.map(date=>`<section class="day-group"><h3 class="day-heading">${date}<span>${selected.length}位员工 · 分别统计</span></h3>${selected.map(worker=>{
     const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
     return recordCard(worker,rec,state);
-  }).join('')}</section></details>`).join('');
+  }).join('')}</section>`).join('');
   document.querySelector('#daily').innerHTML=rows.length?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows.join('')}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无每日记录</p>';
 }
 function renderHistory(records,workers,statusMap){
