@@ -592,7 +592,18 @@ def act_text(db,text,sender,group,callback):
   raise ValueError('不是确认消息')
  init(db)
  from batch_status import latest_actionable_batch
+ explicit_source = text.strip().split()[1] if len(text.strip().split()) > 1 else None
+ with q.conn(db) as c:
+  pending = c.execute("SELECT DISTINCT source FROM review_cards WHERE sender=? AND grp=? AND state='pending' AND expires>?", (sender,group,time.time())).fetchall()
+  active_sources = [r['source'] for r in pending if not _verified_upload_receipt(db,r['source'])]
+ if not explicit_source and len(active_sources)>1:
+  raise ValueError('有多张待核对卡，请在对应卡片上确认，不能用无日期的准确匹配最新一张')
  actionable=latest_actionable_batch(db,sender,group)
+ if explicit_source:
+  with q.conn(db) as c:
+   bound=c.execute("SELECT source,state FROM review_cards WHERE source=? AND sender=? AND grp=? AND state IN ('pending','confirmed') AND expires>? ORDER BY rowid DESC LIMIT 1",(explicit_source,sender,group,time.time())).fetchone()
+  if not bound: raise ValueError('指定核对卡不存在或已失效')
+  actionable=dict(bound)
  if not actionable:
   # A repeated employee message can arrive after the source has already
   # reached a verified GitHub receipt.  In that state there is deliberately

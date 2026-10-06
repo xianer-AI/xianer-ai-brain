@@ -65,6 +65,8 @@ class CardDeliveryTests(unittest.TestCase):
             transport = types.ModuleType('transport')
 
             def request(*args, **kwargs):
+                if args and len(args)>1 and args[1] == 'GET':
+                    return {'data': {'items': [{'deleted': False}]}}
                 calls.append(kwargs.get('data') or args[-1])
                 return {'data': {'message_id': f'om_card_{len(calls)}'}}
 

@@ -1034,6 +1034,16 @@ def _remote_contains_exact_task(text, report, source, confirmation):
             if source in line and confirmation in line:
                 return production_date in line and name in line and expected_state in line
         return False
+    if report.get('historical_supplement'):
+        day = re.escape(report['production_date'])
+        rows = []
+        for block in re.findall(r'^#### ' + day + r'\s*\n(.*?)(?=\n#{2,}|\Z)', text, re.M | re.S):
+            for line in block.splitlines():
+                cells = [v.strip() for v in line.strip().strip('|').split('|')]
+                if len(cells) in (9, 10) and cells[0].startswith(report['worker'] + '｜'):
+                    rows.append(cells)
+        expected = [str(report['values'][p]) for p in PRODUCTS]
+        return len(rows) == 1 and rows[0][2:8] == expected
     return True
 
 

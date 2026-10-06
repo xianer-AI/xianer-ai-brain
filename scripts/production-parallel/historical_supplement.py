@@ -42,3 +42,18 @@ def apply_missing(text, worker, day, supplied, source, confirmation):
     pos+=len(rows)
     after=after[:pos]+f'\n历史缺项补齐来源：{source}；确认消息：{confirmation}\n'+after[pos:]
     return after,data
+
+def merge_extracted(text, extracted, identity):
+    """Bind parsed supplement to sender identity and an exact ledger row."""
+    worker=extracted.get('worker')
+    if not identity or worker!=identity.get('worker'):
+        raise ValueError('补核员工与发送人身份不一致')
+    items=extracted.get('items') or []
+    supplied={i['product']:i['quantity'] for i in items}
+    if len(supplied)!=len(items): raise ValueError('补核产品重复')
+    merged=preview(text,worker,extracted.get('production_date',''),supplied)
+    result=dict(extracted)
+    result.update(historical_supplement=supplied,original_values=merged['original'],
+                  items=[{'product':p,'quantity':v,'process':'下机' if worker in 'AB' else '烤边'} for p,v in merged['values'].items()],
+                  missing=[],total=merged['total'],backfill=False)
+    return result

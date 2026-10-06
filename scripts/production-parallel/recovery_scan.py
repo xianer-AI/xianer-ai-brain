@@ -83,14 +83,16 @@ def _summary(record):
         identity_line = f"老板代报：{extracted['worker']}={names[extracted['worker']]} 请核实"
     else:
         identity_line = '身份：待核实（不能据此自动归入 A/B/C/D）'
-    lines = ['网络恢复后补处理', identity_line,
+    label = '历史缺项补核（保留已有数量，不是今天产能）' if extracted.get('historical_supplement') else '网络恢复后补处理'
+    lines = [label, identity_line,
              f"生产日：{extracted.get('production_date') or '待核实'}"]
     total = 0
     for product in PRODUCTS:
         if product in items:
             value = int(items[product])
             total += value
-            lines.append(f'{product}：{value} 双')
+            suffix = ('（本次补核）' if product in extracted['historical_supplement'] else '（保留原记录）') if extracted.get('historical_supplement') else ''
+            lines.append(f'{product}：{value} 双{suffix}')
         else:
             lines.append(f'{product}：0 双（数量为0，请核实）')
     lines.append(f'合计：{total} 双（已报项目小计）')
@@ -266,7 +268,38 @@ def scan(db, limit=200):
             supplied = {item.get('product') for item in extracted.get('items', [])}
             explicit_date = bool(re.search(r'20\d{2}[-年/]\d{1,2}[-月/]\d{1,2}', str(record['event'].get('content', ''))))
             if explicit_date and supplied and supplied != set(PRODUCTS):
-                continue
+                try:
+                    from historical_supplement import merge_extracted
+                    from worker_identity import lookup
+                    import commit_guard, base64
+                    identity = lookup(db, row['sender'])
+                    endpoint = commit_guard.endpoint_for_date(extracted['production_date'])
+                    remote = commit_guard.gh_read_json(endpoint)
+                    text = base64.b64decode(remote['content']).decode('utf-8')
+                    extracted = merge_extracted(text, extracted, identity)
+                    # Keep the original parser output and raw message for audit.
+                    record['result']['original_extracted'] = record['result']['extracted']
+                    record['result']['extracted'] = extracted
+                    c.execute('UPDATE inbox SET result=? WHERE id=?',
+                              (json.dumps(record['result'], ensure_ascii=False), row['id']))
+                except Exception as exc:
+                    c.execute('UPDATE inbox SET error=? WHERE id=?',
+                              ('历史补核暂停：' + str(exc)[:180], row['id']))
+                    continue
+            if extracted.get('historical_supplement'):
+                duplicate = False
+                for active in c.execute("SELECT rc.source,i.result FROM review_cards rc JOIN inbox i ON i.id=rc.source WHERE rc.sender=? AND rc.grp=? AND rc.state IN ('pending','confirmed') AND rc.source<>?", (row['sender'],row['grp'],row['id'])).fetchall():
+                    other = (json.loads(active['result'] or '{}').get('extracted') or {})
+                    if other.get('production_date') != extracted.get('production_date'):
+                        continue
+                    duplicate = True
+                    if other.get('historical_supplement') == extracted['historical_supplement']:
+                        c.execute('INSERT OR REPLACE INTO recovery_suppressions(source,reason,created) VALUES(?,?,?)', (row['id'],'duplicate historical supplement; bound to '+active['source'],time.time()))
+                    else:
+                        c.execute('UPDATE inbox SET error=? WHERE id=?', ('历史补核暂停：同一天已有待处理核对卡，不能并行确认不同版本',row['id']))
+                    break
+                if duplicate:
+                    continue
             # Empty model drafts are not production reports. They used to
             # create noisy all-"核实" cards with a zero subtotal (including
             # test fixture source IDs). A real all-zero report still has
