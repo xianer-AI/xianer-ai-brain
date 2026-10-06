@@ -54,14 +54,12 @@ function renderAlerts(stamp,syncRows){
   const section=(md.match(/### 核对卡业务状态([\s\S]*?)(?=\n#{2,} |$)/)||[])[1];
   if(section===undefined)alerts.push({kind:'info',text:'核对卡业务状态尚未接入，暂不能判断是否有员工等待回复。'});
   else {
-    const pendingCards=[], completedCards=[];
+    const pendingCards=[];
     for(const row of section.matchAll(/\|\s*([^|]+)\|\s*(20\d{2}-\d{2}-\d{2})\s*\|\s*([^|]+)\|\s*([^|]+)\|/g)){
       const item=`${row[1].trim()} · ${row[2]} · ${row[3].trim()} · ${row[4].trim()}`;
       if(/等待回复|待确认|待核实|待处理/.test(row[3])) pendingCards.push(item);
-      else completedCards.push(item);
     }
     if(pendingCards.length) alerts.push({kind:'business',text:`业务待确认：${pendingCards.join('；')}`});
-    else if(completedCards.length) alerts.push({kind:'ok',text:`✓ 核对卡已完成：${completedCards.join('；')}`});
     else alerts.push({kind:'ok',text:'✓ 当前没有等待回复的核对卡'});
   }
   if(versions&&versions!=='一致')alerts.push({kind:'error',text:`版本告警：三端规则版本${versions}。`});
