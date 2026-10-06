@@ -1,14 +1,14 @@
 {
   "builder_sha256": "6e5a49368e1170e9fe1d37ae064e2a07118da559ecdd4d25cb18f29c04cc2a67",
   "card_protocol_version": "CARD-INTERACTIVE-1",
-  "generated_at": "2026-10-06T15:20:39+00:00",
-  "ledger_sha256": "b6f8a071b37bc9fd11a334d678c945e441b3988db5f55c91b33c2e2021480a30",
+  "generated_at": "2026-10-06T15:25:49+00:00",
+  "ledger_sha256": "9d6db54617a4059c544ba006bbff3fac8d8a5ba5bc1f56ea742b21c44b7b561f",
   "release_status": "正式",
   "rules_release_id": "2026-10-06-v1.18",
   "schema": 1,
-  "source_digest": "19e497d5537cb343b0ba9ac4cc301ea8ef5b0b99e4abaa48ffdf7cbae89803b8",
+  "source_digest": "af7f4da0fda5c32571e321f43cb0260c2f9374777dba1236a6e2fdcadb11c075",
   "sync_protocol_version": "S1",
-  "template_sha256": "60a26ca7ec6d6f6f749ed73ea515ea026194cd68b29a798e19a2e7eca31f8ad3",
+  "template_sha256": "858254298466603cc39a819bd3f0a2deee1161dd0a91aa6c5a1e3f128a19b7d1",
   "version_sha256": "8cc5cb772fa80ba3b8dbb19bb66803a5f17110956b04becb7a1a3af2406aa029",
   "workbench_version": "V1.18"
 }

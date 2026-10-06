@@ -381,11 +381,10 @@ function renderHistory(records,workers,statusMap){
       return `<tr><td>${date}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(state)}</td></tr>`;
     }).join('');
     const mobile=dates.map(date=>{const rec=byKey.get(`${date}|${worker.person}`);return recordCard(worker,rec,rec?recordStatus(rec):statusFor(statusMap,date,worker.person),date);}).join('');
-    const defaultOpen=window.matchMedia('(max-width:700px)').matches?'closed':'open';
-    const open=savedView('history-'+worker.code,defaultOpen)==='open';
+    const open=savedView((window.matchMedia('(max-width:700px)').matches?'history-':'desktop-history-')+worker.code,'closed')==='open';
     return `<details data-worker="${worker.code}"${open?' open':''}><summary>${esc(workerName(worker))} · ${esc(worker.process)}<span class="history-caption">已确认 ${numberText(agg.total)} 双 · ${dates.length} 条历史记录</span></summary>${rows?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无记录</p>'}</details>`;
   }).join('')}</div>`;
-  document.querySelectorAll('#history details').forEach(el=>el.addEventListener('toggle',()=>saveView('history-'+el.dataset.worker,el.open?'open':'closed')));
+  document.querySelectorAll('#history details').forEach(el=>el.addEventListener('toggle',()=>saveView((window.matchMedia('(max-width:700px)').matches?'history-':'desktop-history-')+el.dataset.worker,el.open?'open':'closed')));
 }
 function bindDailyFilter(){
   for(const [id,key] of [['daily-range','range'],['daily-worker','worker'],['summary-month','month'],['summary-worker','summary-worker'],['detail-month','detail-month'],['detail-worker','detail-worker'],['period-worker','period-worker']]){
