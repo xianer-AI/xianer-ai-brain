@@ -75,6 +75,12 @@ def require_bound_supplement(record):
         raise ValueError('报数包含多个生产日期，暂停核对，禁止自动选择日期')
     raw=str(event.get('content','')).replace('冰袜袜','冰冰袜')
     raw_products={p for p in PRODUCTS if re.search(re.escape(p)+r'\s*(?:[：:=、,，-]\s*)?[0-9]',raw)}
+    raw_values={}
+    for p in PRODUCTS:
+        m=re.search(re.escape(p)+r'\s*(?:[：:=、,，-]\s*)?([0-9][0-9,]*)',raw)
+        if m: raw_values[p]=int(m.group(1).replace(',',''))
+    if items and all(i.get('quantity')==0 for i in items) and any(v>0 for v in raw_values.values()):
+        raise ValueError('原报数有非零数量，禁止生成全零核对卡')
     if items and all(i.get('quantity')==0 for i in items) and raw_products!=set(PRODUCTS) and not extracted.get('historical_supplement'):
         raise ValueError('禁止缺项自动补零：缺项或无数量的消息不能生成全零生产核对卡')
     if explicit and products and (products!=set(PRODUCTS) or

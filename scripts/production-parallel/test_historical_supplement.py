@@ -170,3 +170,7 @@ class RecoveryIntegrationTests(unittest.TestCase):
   for raw in ['c 过膝袜0','过膝袜、女船袜、男船袜都为零','生产补报 3 B 2026-09-20']:
    with self.assertRaisesRegex(ValueError,'不能生成全零'):
     require_bound_supplement({'event':{'content':raw},'result':{'extracted':{'items':[{'product':p,'quantity':0} for p in writer.PRODUCTS]}}})
+ def test_model_cannot_zero_explicit_nonzero_raw_report(self):
+  from historical_supplement import require_bound_supplement
+  record={'event':{'content':'棉堆堆袜2400 冰冰袜1500 小腿袜300 过膝袜0 女船袜0 男船袜0'},'result':{'extracted':{'items':[{'product':p,'quantity':0} for p in writer.PRODUCTS]}}}
+  with self.assertRaisesRegex(ValueError,'禁止生成全零'):require_bound_supplement(record)
