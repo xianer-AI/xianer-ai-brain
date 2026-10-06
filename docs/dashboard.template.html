@@ -10,7 +10,12 @@
 .banner{display:flex;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;background:#eef7f1;border:1px solid #cce8d5;border-radius:10px;padding:12px 16px;margin:22px 0;color:#176b3a}.banner.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}.alert-stack{display:grid;gap:8px;margin:0 0 14px}.alert{border:1px solid;border-radius:10px;padding:10px 14px}.alert.ok{background:#eef7f1;border-color:#cce8d5;color:#176b3a}.alert.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}.alert.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}.alert.info{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.alert.business{background:#fff7ed;border-color:#fdba74;color:#9a3412}.status-content{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.business-pending{display:inline-flex;align-items:center;max-width:100%;padding:3px 9px;border:1px solid #bfdbfe;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:600;line-height:1.6}.ok{color:#147a43;font-weight:600}.bad{color:#a5281b;font-weight:600}.waiting{color:#9a3412;font-weight:600}.freshness{display:flex;gap:4px 14px;flex-wrap:wrap;margin:-12px 0 18px;color:#64748b;font-size:13px}.task-health{margin:0 0 18px;padding:10px 14px;border:1px solid #dbe5f0;border-radius:10px;background:#f8fafc;color:#475569;font-size:14px}.task-health.ok{background:#eef7f1;border-color:#cce8d5;color:#176b3a}.task-health.error{background:#fff4f2;border-color:#f2c7c2;color:#a5281b}
 table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding:12px;border-bottom:1px solid #e5eaf0;overflow-wrap:anywhere}th{background:#f3f6fa;color:#4b5563}.sync-table{table-layout:fixed;margin:12px 0}.sync-table th:nth-child(1){width:15%}.sync-table th:nth-child(2){width:25%}.sync-table th:nth-child(3){width:26%}.sync-table th:nth-child(4){width:34%}.sync-panel{border:1px solid #e2e8f0;border-radius:10px;margin:0 0 24px;padding:0 14px}.sync-panel>summary{cursor:pointer;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600;list-style:none}.sync-panel>summary::after{content:'展开';font-size:13px;color:#64748b}.sync-panel[open]>summary::after{content:'收起'}.sync-panel>summary::-webkit-details-marker{display:none}.sync-caption{font-weight:400;color:#64748b;font-size:13px}
 .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{background:#f7f9fc;border:1px solid #e4e9f0;border-radius:10px;padding:14px;min-width:0}.card b{display:block;font-size:24px;margin:6px 0;font-variant-numeric:tabular-nums}.card small{display:block;color:#64748b;font-size:13px}.capacity-name{font-weight:600}.history-wrap{overflow:auto;margin:10px 0 26px}.history-table,.summary-table{min-width:980px}.history-table th,.history-table td,.summary-table th,.summary-table td{font-size:13px;padding:10px 8px;white-space:nowrap}.summary-total,.history-total{font-weight:700;color:#1f2937}.subsection{margin:20px 0 8px;font-size:18px}.section-note{margin:0 0 16px;font-size:14px}.state-confirmed{color:#147a43;font-weight:600}.state-pending{color:#b42318;font-weight:700}.pending-dates{display:block;margin-top:3px;color:#b42318;font-size:11px;font-weight:600;line-height:1.4;white-space:normal}.state-absent{color:#64748b;font-weight:600}.state-none{color:#94a3b8}.filter-bar{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;margin:8px 0 16px}.filter-field{display:flex;align-items:center;gap:8px}.filter-bar label{color:#475569;font-size:14px}.filter-bar select{border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:10px 12px;color:#1f2937;font:inherit;min-height:44px}.employee-details{display:grid;gap:10px;margin:10px 0 26px}.employee-details details{border:1px solid #e2e8f0;border-radius:10px;background:#fff;overflow:hidden}.employee-details summary{cursor:pointer;list-style:none;padding:14px 15px;background:#f8fafc;font-weight:700;min-height:48px}.employee-details summary::-webkit-details-marker{display:none}.employee-details summary::before{content:'＋';display:inline-block;width:20px;color:#64748b}.employee-details details[open] summary::before{content:'−'}.employee-details .history-wrap{margin:0;padding:0 12px 12px}.history-caption{display:block;margin-left:20px;color:#64748b;font-size:13px;font-weight:400}.mobile-view{display:none}.refresh-footer{font-size:13px;margin:28px 0 0;padding-top:16px;border-top:1px solid #e2e8f0}.refresh-footer #next-refresh{display:block;margin-top:6px;color:#475569}
+.production-comparison,.section-nav a.comparison-nav{display:none}
 @media(min-width:701px){
+ .production-comparison{display:block}.section-nav a.comparison-nav{display:flex}
+ .comparison-products{display:flex;gap:8px 16px;flex-wrap:wrap;border:1px solid #dbe3ee;border-radius:10px;padding:12px 14px;margin:0 0 16px}.comparison-products legend{padding:0 6px;color:#475569;font-size:14px}.comparison-products label{display:flex;gap:6px;align-items:center;font-size:14px;min-height:30px}.comparison-products input{width:17px;height:17px;accent-color:#2563eb}
+ .production-comparison button{font:inherit;cursor:pointer}.production-comparison button:focus-visible,.production-comparison input:focus-visible,.production-comparison a:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}.comparison-all{border:1px solid #cbd5e1;border-radius:7px;background:#f8fafc;color:#334155;padding:5px 12px;font-size:13px!important}.production-comparison input[type=date]{font:inherit;color:#1f2937;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;min-height:44px;background:#fff}.production-comparison [hidden]{display:none!important}
+ .comparison-cards{grid-template-columns:repeat(2,minmax(0,1fr));margin:12px 0 16px}.comparison-cards .card b{color:#202124}.comparison-cards .card small+small{margin-top:4px}.comparison-caption{margin:0 0 10px;font-size:13px;color:#64748b}.comparison-table{min-width:680px;font-size:14px}.comparison-table th,.comparison-table td{padding:11px 12px}.comparison-table th:first-child{width:22%}.comparison-table td{font-variant-numeric:tabular-nums}.comparison-table small{display:block;font-size:12px;color:#6b7280;font-weight:400;margin-top:3px}.comparison-table .comparison-number{font-weight:600;color:#202124}.comparison-table .comparison-high{color:#1d4ed8}.comparison-table .comparison-low{color:#c2410c}.comparison-table .comparison-combined{color:#202124;font-weight:600}.comparison-table tfoot{background:#f3f6fa;font-weight:700}.comparison-product-toggle{border:0;background:transparent;color:#334155;padding:4px 0;text-align:left;font-weight:600!important;min-height:36px}.comparison-product-toggle::before{content:'▸';display:inline-block;width:18px;color:#64748b}.comparison-product-toggle[aria-expanded=true]::before{content:'▾'}.comparison-day-row>td{padding:12px;background:#f8fafc}.comparison-day-table{font-size:13px;background:#fff}.comparison-day-table th:first-child{width:22%}.comparison-day-table td,.comparison-day-table th{padding:9px 12px}.comparison-incomplete{color:#6b7280;font-size:12px}.comparison-incomplete a{color:#475569;text-decoration:underline}.comparison-missing{border:1px solid #dbe3ee;border-radius:10px;padding:0 14px;margin:12px 0 26px}.comparison-missing>summary{cursor:pointer;font-size:14px;font-weight:600;padding:12px 0;min-height:46px}.comparison-missing .history-wrap{margin:0 0 14px;max-height:360px;overflow:auto}.comparison-empty{padding:14px;border:1px solid #dbe3ee;border-radius:10px;background:#f8fafc;color:#64748b}
  #monthly-detail{display:grid;gap:12px;margin:10px 0 26px}
  #monthly-detail>.day-fold{border:1px solid #dbe3ee;border-radius:12px;background:#fff;overflow:hidden}
  #monthly-detail>.day-fold>summary{display:flex;align-items:center;gap:10px;min-height:54px;margin:0;padding:14px 16px;background:#f8fafc;cursor:pointer;list-style:none;font-weight:600;color:#1e3a8a}
@@ -33,13 +38,19 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <main>
 <h1>袜子生产统计工作台</h1><div class="sub" id="period-label">2026 年下半年 · 单位：双</div>
 <div class="filter-bar"><div class="filter-field"><label for="dashboard-year">统计年度</label><select id="dashboard-year"><option value="2026">2026年下半年</option><option value="2027">2027年全年</option></select></div></div>
-<nav class="section-nav" aria-label="产能导航"><a href="#daily-title">每日产能</a><a href="#monthly-title">月产能汇总</a><a href="#monthly-detail-title">每月明细</a><a href="#history-title">员工明细</a><a href="#period-title">累计产能</a></nav>
+<nav class="section-nav" aria-label="产能导航"><a href="#daily-title">每日产能</a><a class="comparison-nav" href="#comparison-title">员工对比</a><a href="#monthly-title">月产能汇总</a><a href="#monthly-detail-title">每月明细</a><a href="#history-title">员工明细</a><a href="#period-title">累计产能</a></nav>
 <div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div>
 <details class="sync-panel" id="sync-panel"><summary><span>同步详情</span><span class="sync-caption">GitHub · OpenClaw · 飞书 · 手机网页</span></summary><table class="sync-table"><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><p class="muted section-note">同步状态反映当前系统任务；生产数据和核对卡按所选年度分别统计。</p></details>
 <h2 id="overview-title">产能总览</h2><p class="muted section-note">按员工和工序分别统计，每个人单独计算。</p><div id="capacity"></div>
 <h2 id="daily-title">每日生产产品明细</h2><p class="muted section-note">默认显示最近3个记录日期。未上班、待核实和无记录分别标注，不当作0。</p>
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
 
+<section class="production-comparison" aria-labelledby="comparison-title">
+<h2 id="comparison-title">员工生产对比</h2><p class="muted section-note">同工序两人对比 · 已确认数量分别保留；待核实和无记录不当作0，未上班单独标注。</p>
+<div class="filter-bar"><div class="filter-field"><label for="comparison-process">工序</label><select id="comparison-process"><option value="下机">下机 · 徐超超 / 梅芳</option><option value="烤边">烤边 · 李鸿玉 / 张小翠</option></select></div><div class="filter-field"><label for="comparison-mode">日期方式</label><select id="comparison-mode"><option value="month">整月</option><option value="day">单日</option><option value="range">自定义范围</option></select></div><div class="filter-field" data-comparison-period="month"><label for="comparison-month">月份</label><select id="comparison-month"></select></div><div class="filter-field" data-comparison-period="day" hidden><label for="comparison-day">日期</label><input id="comparison-day" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-start">开始</label><input id="comparison-start" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-end">结束（含当天）</label><input id="comparison-end" type="date"></div></div>
+<fieldset class="comparison-products"><legend>对比产品 · 可多选</legend><button class="comparison-all" type="button" id="comparison-all">全部产品</button><div id="comparison-products" style="display:contents"></div></fieldset>
+<div id="comparison-result" aria-live="polite"></div>
+</section>
 
 <h2 id="monthly-detail-title">每月生产明细</h2><p class="muted section-note">选择月份和员工，查看该月每天的完整记录；历史补核按日期单独显示。</p><div class="filter-bar"><div class="filter-field"><label for="detail-month">月份</label><select id="detail-month"></select></div><div class="filter-field"><label for="detail-worker">员工</label><select id="detail-worker"><option value="all">全部员工</option></select></div></div><div id="monthly-detail"></div>
 
@@ -326,6 +337,165 @@ function prepareFilters(workers,records,statusMap){
   periodWorker.value=savedView('period-worker','all');
 }
 
+function comparisonDateValid(date){
+  if(typeof date!=='string'||!/^20\d{2}-\d{2}-\d{2}$/.test(date))return false;
+  const [year,month,day]=date.split('-').map(Number),value=new Date(Date.UTC(year,month-1,day));
+  return value.getUTCFullYear()===year&&value.getUTCMonth()===month-1&&value.getUTCDate()===day;
+}
+function comparisonPeriod(mode,month,day,start,end,year){
+  if(!PERIODS[year])return {valid:false,error:'统计年度无效。'};
+  if(mode==='month'&&monthsForYear(year).includes(month)){
+    start=month+'-01';end=month+'-'+String(new Date(Date.UTC(Number(year),Number(month.slice(5,7)),0)).getUTCDate()).padStart(2,'0');
+  }else if(mode==='day'){start=day;end=day;}
+  else if(mode!=='range')return {valid:false,error:'请选择有效月份。'};
+  const minimum=`${year}-${String(PERIODS[year].firstMonth).padStart(2,'0')}-01`,maximum=`${year}-12-31`;
+  if(!comparisonDateValid(start)||!comparisonDateValid(end))return {valid:false,error:'请填写完整、有效的日期。'};
+  if(start>end)return {valid:false,error:'开始日期不能晚于结束日期。'};
+  if(start<minimum||end>maximum)return {valid:false,error:`日期须在 ${minimum} 至 ${maximum} 之间。`};
+  return {valid:true,start,end};
+}
+function buildProductionComparison(workers,records,statusMap,options={}){
+  const emptyCell=()=>({value:null,days:0,absentDays:0,missingDates:[],complete:false,average:null});
+  const invalid=error=>({workers:[],dates:[],rows:[],totals:{left:emptyCell(),right:emptyCell(),combined:null,difference:null,complete:false},missing:[],valid:false,error});
+  if(!options||typeof options!=='object')return invalid('对比条件无效。');
+  const {process,start,end,products}=options,codes=process==='下机'?['A','B']:process==='烤边'?['C','D']:null;
+  if(!codes)return invalid('请选择下机或烤边工序。');
+  if(!comparisonDateValid(start)||!comparisonDateValid(end)||start>end)return invalid('日期范围无效。');
+  const year=start.slice(0,4),period=PERIODS[year];
+  if(!period||end.slice(0,4)!==year||start<`${year}-${String(period.firstMonth).padStart(2,'0')}-01`)return invalid('日期须在同一统计年度内。');
+  if(!Array.isArray(products)||!products.length||products.some(index=>!Number.isInteger(index)||index<0||index>=PRODUCTS.length))return invalid('请至少选择一种有效产品。');
+  if(!Array.isArray(workers)||!Array.isArray(records)||!statusMap||typeof statusMap.entries!=='function')return invalid('生产数据格式无效。');
+  const pair=codes.map(code=>workers.find(worker=>worker.code===code&&worker.process===process));
+  if(pair.some(worker=>!worker))return invalid('同工序员工资料不完整。');
+  const selected=[...new Set(products)].sort((a,b)=>a-b),people=new Set(pair.map(worker=>worker.person)),observed=new Set(),byKey=new Map(),states=new Map();
+  const inRange=date=>comparisonDateValid(date)&&date>=start&&date<=end;
+  for(const rec of records){
+    if(!rec||!people.has(rec.person)||(rec.process&&rec.process!==process)||!inRange(rec.date))continue;
+    observed.add(rec.date);const key=`${rec.date}|${rec.person}`;
+    if(!byKey.has(key))byKey.set(key,[]);byKey.get(key).push(rec);
+  }
+  for(const [key,status] of statusMap.entries()){
+    if(typeof key!=='string')continue;
+    const date=key.slice(0,10),person=key.slice(11);
+    if(key[10]!=='|'||!people.has(person)||!inRange(date))continue;
+    observed.add(date);states.set(key,status);
+  }
+  const dates=[...observed].sort(),missing=[];
+  function dailyCell(worker,date,productIndex){
+    const key=`${date}|${worker.person}`,dayRecords=byKey.get(key)||[],rawStatus=String(states.get(key)||'');
+    let value=null,raw='';
+    for(const rec of dayRecords){const entry=rec.values?.[productIndex],amount=numeric(entry);if(amount!==null&&Number.isFinite(amount))value=amount;else if(entry!==undefined&&String(entry).trim())raw=String(entry).trim();}
+    if(value!==null)return {...emptyCell(),value,days:1,complete:true,average:value,status:'已确认'};
+    const anyNumeric=dayRecords.some(rec=>PRODUCTS.some((_,index)=>{const amount=numeric(rec.values?.[index]);return amount!==null&&Number.isFinite(amount);}));
+    const pending=/待查|核实|待处理/.test(raw);
+    const absent=!pending&&(/未上班/.test(raw)||(!anyNumeric&&/未上班/.test(rawStatus)));
+    if(absent)return {...emptyCell(),absentDays:1,status:'已确认未上班'};
+    const status=pending||/待查|核实|待处理/.test(rawStatus)?'待核实':raw&& !/^(?:—|-|无记录|未知|unknown)$/i.test(raw)?raw:/^(?:未知|unknown)$/i.test(raw)?'未知':'无记录';
+    missing.push({worker,date,productIndex,product:PRODUCTS[productIndex],status});
+    return {...emptyCell(),missingDates:[{date,status}],status};
+  }
+  function rollup(cellsByDate){
+    const cell=emptyCell(),missingByDate=new Map();let hasNumber=false;
+    for(const [date,cells] of cellsByDate){
+      const known=cells.filter(item=>item.value!==null);
+      if(known.length){hasNumber=true;cell.value=(cell.value??0)+known.reduce((sum,item)=>sum+item.value,0);cell.days++;}
+      else if(cells.length&&cells.every(item=>item.absentDays))cell.absentDays++;
+      for(const item of cells)for(const detail of item.missingDates){const old=missingByDate.get(detail.date);if(!old||detail.status==='待核实')missingByDate.set(detail.date,{date,status:detail.status});}
+    }
+    cell.missingDates=[...missingByDate.values()];cell.complete=hasNumber&&!cell.missingDates.length;cell.average=cell.complete?cell.value/cell.days:null;return cell;
+  }
+  function comparison(left,right){
+    const complete=left.complete&&right.complete;
+    return {left,right,combined:left.value===null&&right.value===null?null:(left.value??0)+(right.value??0),difference:complete?left.value-right.value:null,complete};
+  }
+  const totalDays=[new Map(dates.map(date=>[date,[]])),new Map(dates.map(date=>[date,[]]))];
+  const rows=selected.map(productIndex=>{
+    const days=dates.map(date=>{
+      const cells=pair.map((worker,side)=>{const cell=dailyCell(worker,date,productIndex);totalDays[side].get(date).push(cell);return cell;});
+      return {date,...comparison(cells[0],cells[1])};
+    });
+    const left=rollup(days.map(day=>[day.date,[day.left]])),right=rollup(days.map(day=>[day.date,[day.right]]));
+    return {productIndex,product:PRODUCTS[productIndex],...comparison(left,right),days};
+  });
+  return {workers:pair,dates,rows,totals:comparison(rollup(totalDays[0]),rollup(totalDays[1])),missing,valid:true,error:''};
+}
+let comparisonEventController=null,comparisonPreparedYear=null;
+function readComparisonPreferences(workers,records,statusMap){
+  const month=defaultMonth(activeYear,records,statusMap),savedProducts=savedView('comparison-products','0,1,2,3,4,5');
+  const latest=[...records.map(rec=>rec.date),...[...statusMap.keys()].map(key=>key.slice(0,10))].filter(date=>date.startsWith(month)).sort().pop()||month+'-01';
+  return {process:savedView('comparison-process','下机'),mode:savedView('comparison-mode','month'),month:savedView('comparison-month',month),day:savedView('comparison-day',latest),start:savedView('comparison-start',month+'-01'),end:savedView('comparison-end',month+'-'+String(new Date(Date.UTC(Number(activeYear),Number(month.slice(5,7)),0)).getUTCDate()).padStart(2,'0')),products:savedProducts==='none'?[]:savedProducts.split(',').filter(item=>/^\d$/.test(item)).map(Number).filter(index=>index<PRODUCTS.length)};
+}
+function prepareProductionComparison(workers,records,statusMap){
+  if(!window.matchMedia('(min-width:701px)').matches)return;
+  const preferences=readComparisonPreferences(workers,records,statusMap),months=monthsForYear(activeYear);
+  for(const [id,value] of [['process',preferences.process],['mode',preferences.mode]]){const select=document.querySelector('#comparison-'+id);select.value=value;if(!select.value)select.value=id==='process'?'下机':'month';}
+  const month=document.querySelector('#comparison-month');month.innerHTML=months.map(value=>`<option value="${value}">${monthLabel(value)}</option>`).join('');month.value=preferences.month;if(!month.value)month.value=defaultMonth(activeYear,records,statusMap);
+  for(const id of ['day','start','end']){const input=document.querySelector('#comparison-'+id);input.min=`${activeYear}-${String(PERIODS[activeYear].firstMonth).padStart(2,'0')}-01`;input.max=activeYear+'-12-31';input.value=preferences[id];}
+  document.querySelector('#comparison-products').innerHTML=PRODUCTS.map((product,index)=>`<label><input type="checkbox" value="${index}"${preferences.products.includes(index)?' checked':''}>${esc(product)}</label>`).join('');
+  comparisonPreparedYear=activeYear;bindProductionComparison();renderProductionComparison(workers,records,statusMap);
+}
+function comparisonSelectedProducts(){return [...document.querySelectorAll('#comparison-products input:checked')].map(input=>Number(input.value));}
+function comparisonAmount(cell,colour=''){
+  const value=cell.value===null?'—':numberText(cell.value);
+  const missing=cell.missingDates.length?`<small class="comparison-incomplete"><a href="#comparison-missing" data-comparison-missing>数据未完整 · ${cell.missingDates.length}天待查</a></small>`:'';
+  const absent=cell.absentDays?`<small>未上班 ${cell.absentDays} 天</small>`:'';
+  return `<span class="comparison-number ${colour}">${value}</span>${missing}${absent}`;
+}
+function comparisonColours(item){return item.complete&&item.difference!==0?(item.difference>0?['comparison-high','comparison-low']:['comparison-low','comparison-high']):['',''];}
+function comparisonDifference(item,workers){
+  if(item.difference===null)return '<span class="comparison-incomplete">— · 数据未完整</span>';
+  if(item.difference===0)return '<span class="comparison-number">0 · 持平</span>';
+  return `<span class="comparison-number ${item.difference>0?'comparison-high':'comparison-low'}">${item.difference>0?'+':''}${numberText(item.difference)}<small>${esc(workerName(workers[item.difference>0?0:1]))}多 ${numberText(Math.abs(item.difference))} 双</small></span>`;
+}
+function comparisonCombined(item){return `<span class="comparison-combined">${item.combined===null?'—':numberText(item.combined)}</span>${item.complete?'':'<small>已确认小计 · 数据未完整</small>'}`;}
+function renderProductionComparison(workers,records,statusMap){
+  if(!window.matchMedia('(min-width:701px)').matches)return;
+  const field=id=>document.querySelector('#comparison-'+id).value,mode=field('mode');
+  document.querySelectorAll('[data-comparison-period]').forEach(element=>element.hidden=element.dataset.comparisonPeriod!==mode);
+  const period=comparisonPeriod(mode,field('month'),field('day'),field('start'),field('end'),activeYear),products=comparisonSelectedProducts(),target=document.querySelector('#comparison-result');
+  const result=period.valid?buildProductionComparison(workers,records,statusMap,{process:field('process'),start:period.start,end:period.end,products}):{valid:false,error:period.error};
+  if(!result.valid){target.innerHTML=`<p class="comparison-empty" role="status">${esc(result.error)}</p>`;return;}
+  const viewYear=activeYear,process=field('process'),pair=result.workers,head=`<thead><tr><th scope="col">产品 · 点击展开每日</th><th scope="col">${esc(workerName(pair[0]))}</th><th scope="col">${esc(workerName(pair[1]))}</th><th scope="col">两人合计</th><th scope="col">差额（左 − 右）</th></tr></thead>`;
+  const cards=pair.map((worker,side)=>{const cell=result.totals[side===0?'left':'right'];return `<article class="card"><span class="capacity-name">${esc(workerName(worker))} · ${esc(process)}</span><b>${cell.value===null?'—':numberText(cell.value)} 双</b><small>所选产品已确认量 · 有效生产 ${cell.days} 天${cell.absentDays?` · 未上班 ${cell.absentDays} 天`:''}</small><small>日均 ${cell.average===null?'—'+(cell.missingDates.length?'（数据未完整）':'（暂无生产数量）'):numberText(Number(cell.average.toFixed(2)))+' 双'}${cell.missingDates.length?` · <a href="#comparison-missing" data-comparison-missing>查看 ${cell.missingDates.length} 天待查明细</a>`:''}</small></article>`;}).join('');
+  if(!result.dates.length){target.innerHTML=`<p class="comparison-caption">${period.start} 至 ${period.end}（含首尾） · ${products.length}种产品</p><div class="cards comparison-cards">${cards}</div><p class="comparison-empty">该范围暂无本工序两人的记录或出勤状态。</p>`;target.dataset.year=viewYear;target.dataset.process=process;return;}
+  const rows=result.rows.map(row=>{
+    const open=savedView(`comparison-fold-${process}-${row.productIndex}`,'closed')==='open',colours=comparisonColours(row);
+    const daily=row.days.slice().reverse().map(day=>{const colours=comparisonColours(day);return `<tr><th scope="row">${day.date}</th><td>${comparisonAmount(day.left,colours[0])}<small>${esc(day.left.status)}</small></td><td>${comparisonAmount(day.right,colours[1])}<small>${esc(day.right.status)}</small></td><td>${comparisonCombined(day)}</td><td>${comparisonDifference(day,pair)}</td></tr>`;}).join('');
+    return `<tr><th scope="row"><button class="comparison-product-toggle" type="button" data-comparison-product="${row.productIndex}" aria-expanded="${open}" aria-controls="comparison-days-${row.productIndex}">${esc(row.product)}</button></th><td>${comparisonAmount(row.left,colours[0])}</td><td>${comparisonAmount(row.right,colours[1])}</td><td>${comparisonCombined(row)}</td><td>${comparisonDifference(row,pair)}</td></tr><tr class="comparison-day-row" id="comparison-days-${row.productIndex}"${open?'':' hidden'}><td colspan="5">${daily?`<table class="comparison-table comparison-day-table"><caption class="comparison-caption">${esc(row.product)} · 每日数量（双）</caption><thead><tr><th scope="col">日期</th><th scope="col">${esc(workerName(pair[0]))}</th><th scope="col">${esc(workerName(pair[1]))}</th><th scope="col">两人合计</th><th scope="col">差额（左 − 右）</th></tr></thead><tbody>${daily}</tbody></table>`:'<p class="muted">该范围暂无对应日期记录。</p>'}</td></tr>`;
+  }).join('');
+  const total=result.totals,colours=comparisonColours(total),missing=result.missing.length?`<details class="comparison-missing" id="comparison-missing" data-year="${viewYear}" data-process="${esc(process)}"${savedView(`comparison-missing-${process}`,'closed')==='open'?' open':''}><summary>数据未完整 · ${result.missing.length}项日期／产品待查（点击查看）</summary><div class="history-wrap"><table class="comparison-table"><thead><tr><th scope="col">日期</th><th scope="col">员工</th><th scope="col">产品</th><th scope="col">状态</th></tr></thead><tbody>${result.missing.map(item=>`<tr><td>${item.date}</td><td>${esc(workerName(item.worker))}</td><td>${esc(item.product)}</td><td>${esc(item.status)}</td></tr>`).join('')}</tbody></table></div></details>`:'';
+  target.innerHTML=`<p class="comparison-caption">${period.start} 至 ${period.end}（含首尾） · ${products.length}种产品 · ${result.dates.length}个已有记录／出勤日期；只统计本工序两人。高值蓝色、低值橙色；未完整项目保留已确认量。</p><div class="cards comparison-cards">${cards}</div>${result.dates.length?'':'<p class="comparison-empty">该范围暂无本工序两人的记录或出勤状态。</p>'}<div class="history-wrap"><table class="comparison-table">${head}<tbody>${rows}</tbody><tfoot><tr><th scope="row">所选产品合计</th><td>${comparisonAmount(total.left,colours[0])}</td><td>${comparisonAmount(total.right,colours[1])}</td><td>${comparisonCombined(total)}</td><td>${comparisonDifference(total,pair)}</td></tr></tfoot></table></div>${missing}`;
+  target.dataset.year=viewYear;target.dataset.process=process;
+}
+function bindProductionComparison(){
+  if(comparisonEventController||!window.matchMedia('(min-width:701px)').matches)return;
+  comparisonEventController=new AbortController();const signal=comparisonEventController.signal,section=document.querySelector('.production-comparison');
+  section.addEventListener('change',event=>{
+    if(!window.matchMedia('(min-width:701px)').matches)return;
+    const input=event.target;
+    if(input.matches('#comparison-products input'))saveView('comparison-products',comparisonSelectedProducts().join(',')||'none');
+    else if(/^comparison-(process|mode|month|day|start|end)$/.test(input.id))saveView(input.id,input.value);
+    else return;
+    const context=window.__dashboardContext;if(context)renderProductionComparison(context.workers,context.records,context.statusMap);
+  },{signal});
+  section.addEventListener('click',event=>{
+    if(!window.matchMedia('(min-width:701px)').matches)return;
+    const all=event.target.closest('#comparison-all'),toggle=event.target.closest('[data-comparison-product]'),missing=event.target.closest('[data-comparison-missing]');
+    if(all){document.querySelectorAll('#comparison-products input').forEach(input=>input.checked=true);saveView('comparison-products','0,1,2,3,4,5');const context=window.__dashboardContext;if(context)renderProductionComparison(context.workers,context.records,context.statusMap);}
+    if(toggle){const open=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(open));document.getElementById(toggle.getAttribute('aria-controls')).hidden=!open;saveView(`comparison-fold-${document.querySelector('#comparison-result').dataset.process}-${toggle.dataset.comparisonProduct}`,open?'open':'closed');}
+    if(missing){const details=document.querySelector('#comparison-missing');if(details){details.open=true;saveView(`comparison-missing-${details.dataset.process}`,'open',details.dataset.year);}}
+  },{signal});
+  section.addEventListener('toggle',event=>{
+    if(!window.matchMedia('(min-width:701px)').matches)return;
+    const details=event.target;
+    if(details.id==='comparison-missing')saveView(`comparison-missing-${details.dataset.process}`,details.open?'open':'closed',details.dataset.year);
+  },{signal,capture:true});
+}
+function syncProductionComparisonViewport(){
+  if(!window.matchMedia('(min-width:701px)').matches){if(comparisonEventController)comparisonEventController.abort();comparisonEventController=null;comparisonPreparedYear=null;return;}
+  if(comparisonEventController&&comparisonPreparedYear===activeYear)return;
+  const context=window.__dashboardContext;if(context)prepareProductionComparison(context.workers,context.records,context.statusMap);
+}
 function tableHead(includeProcess=true){
   return `<thead><tr><th>人员</th>${includeProcess?'<th>工序</th>':''}${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>合计</th><th>有效天数</th><th>状态</th></tr></thead>`;
 }
@@ -481,11 +651,13 @@ function refresh(){
     renderMonthlySummary(workers,records,statusMap);
     renderMonthlyDetail(workers,records,statusMap);
     renderDaily(records,workers,statusMap);
+    prepareProductionComparison(workers,records,statusMap);
     renderHistory(records,workers,statusMap);
     bindDailyFilter();
   }catch(e){const b=document.querySelector('#banner');b.className='banner error';b.textContent='读取失败：'+e.message;}
 }
 refresh();
+window.addEventListener('resize',syncProductionComparisonViewport);
 checkPublishedSnapshot();
 if(performance.getEntriesByType('navigation')[0]?.type==='reload'||new URL(location.href).searchParams.has('_sync'))requestAnimationFrame(()=>window.scrollTo(0,Number(savedView('scroll','0'))));
 window.addEventListener('pagehide',()=>saveView('scroll',String(window.scrollY)));
