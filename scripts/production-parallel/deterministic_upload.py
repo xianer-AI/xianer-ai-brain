@@ -35,6 +35,19 @@ ENDPOINT = commit_guard.ENDPOINT
 UNSUPPORTED = 75
 
 
+def _quantity_note(worker):
+    """Human-readable meaning only; canonical process fields stay unchanged."""
+    if worker in ('A', 'B'):
+        return '> 数量口径：下机翻袜产量（已翻好数量）。'
+    return '> 数量口径：烤边产量（已烤好数量）。'
+
+
+PERIOD_QUANTITY_NOTE = (
+    '> 本区数量口径：A/B为下机翻袜产量，C/D为烤边产量；'
+    '总产量（烤边）仅合计C/D，不跨工序累计。'
+)
+
+
 def _remote(endpoint=None):
     value = commit_guard.gh_read_json(endpoint or ENDPOINT)
     return value['sha'], base64.b64decode(value['content']).decode('utf-8')
@@ -208,6 +221,7 @@ def _insert_detail(text, worker, report, source, confirmation):
             f'当日合计：{sum(values.values())}双。{date_note}班次未提供。')
     now = dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', '+00:00')
     block = (f'### {date}｜{report["name"]}{report["process"]}\n\n'
+             f'{_quantity_note(worker)}\n\n'
              '| 记录编号 | 产品 | 数量（双） | 状态 |\n|---|---|---:|---|\n'
              f'{rows}\n\n{note}\n\n来源消息：{source}\n\n确认消息：{confirmation}\n\n'
              f'上报日期时间（UTC）：{now}\n\n')
@@ -383,6 +397,7 @@ def _ensure_month_section(text, year, month):
     prefix = '' if insert_at == 0 or text[:insert_at].endswith('\n') else '\n'
     rows = '\n'.join(_month_rows(worker) for worker in WORKERS)
     block = (f'{prefix}## {len(re.findall(r"^## ", text[:insert_at], re.M)) + 1}、{_month_heading(year, month)}\n\n'
+             f'{PERIOD_QUANTITY_NOTE}\n\n'
              '> 尚无有效记录，保留空白结构，不带入其他月份累计。\n\n'
              '| 人员 | 工序 | 棉堆堆袜 | 冰冰袜 | 小腿袜 | 过膝袜 | 女船袜 | 男船袜 | 本月已报小计 | 有记录的生产日数 | 最新已记生产日 |\n'
              '|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|\n'
@@ -419,6 +434,7 @@ def _personal_block(worker, totals, latest, missing_products=None):
     return ('<details>\n'
             f'<summary>当前个人累计：{worker}｜{latest[:4]}年{int(latest[5:7])}月个人累计</summary>\n\n'
             f'{marker}\n\n'
+            f'{_quantity_note(worker)}\n\n'
             f'截至 {latest}，以下只统计{WORKERS[worker][0]}本人当前月份的{label}记录。\n\n'
             '| 产品 | ' + label + '数量（双） | 状态/说明 |\n|---|---:|---|\n' +
             '\n'.join(rows) + '\n\n</details>\n\n')
@@ -912,7 +928,7 @@ def _update_daily(text, worker, report):
             # section itself remains date-scoped, so October cannot pollute
             # September or the next year's ledger.
             insert_at = len(month_text)
-            block = (f'\n{daily_marker}\n\n#### {heading[5:]}\n\n| 人员 | 工序 | 棉堆堆袜 | 冰冰袜 | 小腿袜 | 过膝袜 | 女船袜 | 男船袜 | 当日已报小计 |\n'
+            block = (f'\n{daily_marker}\n\n{PERIOD_QUANTITY_NOTE}\n\n#### {heading[5:]}\n\n| 人员 | 工序 | 棉堆堆袜 | 冰冰袜 | 小腿袜 | 过膝袜 | 女船袜 | 男船袜 | 当日已报小计 |\n'
                      '|---|---|---:|---:|---:|---:|---:|---:|---:|\n| ' + ' | '.join(str(x) for x in fields) + ' |\n\n')
             return text[:month_start] + month_text + block + text[month_end:]
         insert_at = month_text.find('\n', pos) + 1

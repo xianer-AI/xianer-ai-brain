@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 
+from quantity_display import quantity_note, summary_quantity_note
+
 CARD_PROTOCOL = 'CARD-INTERACTIVE-1'
 CARD_TITLE = '生产报数核对'
 BACKFILL_REVIEW_TITLE = '生产补报数核对'
@@ -73,6 +75,9 @@ def payload(summary, *, backfill=False):
     content = normalize_summary(summary)
     if backfill:
         content = _decorate_backfill_summary(content)
+    note = summary_quantity_note(summary)
+    if note:
+        content = note + '\n\n' + content
     content += '\n\n' + (_SUPPLEMENT_INSTRUCTION if '历史缺项补核' in content else _INSTRUCTION)
     return {'config': {'wide_screen_mode': True},
             'header': {'title': {'tag': 'plain_text',
@@ -157,6 +162,9 @@ def backfill_input_payload(worker: str, production_date: str,
         date_hint = [f'待补报日期共 **{len(dates)} 天**：' + '、'.join(dates),
                      '本次先处理当前日期；当前日期完成后，系统自动发送下一张。', '']
     content = '\n'.join([
+        quantity_note(worker),
+        '说明：保留下面模板中的原工序，只填写六项数字。',
+        '',
         '请直接在六个产品名称后的冒号后填写数字，没有生产填0。',
         '员工、日期、工序和产品名称不要修改或删除；六项必须全部保留。',
         *date_hint,

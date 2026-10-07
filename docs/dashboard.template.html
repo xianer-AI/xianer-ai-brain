@@ -42,20 +42,20 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <nav class="section-nav" aria-label="产能导航"><a href="#daily-title">每日产能</a><a href="#product-total-title">产品总产能</a><a class="comparison-nav" href="#comparison-title">员工对比</a><a href="#monthly-title">月产能汇总</a><a href="#monthly-detail-title">每月明细</a><a href="#history-title">员工明细</a><a href="#period-title">累计产能</a></nav>
 <div id="banner" class="banner">正在读取最新状态…</div><div id="freshness" class="freshness" aria-live="polite">台账快照：读取中…</div><div id="alerts" class="alert-stack" aria-live="polite"></div><div id="task-health" class="task-health" aria-live="polite">上传任务：正在检查…</div>
 <details class="sync-panel" id="sync-panel"><summary><span>同步详情</span><span class="sync-caption">GitHub · OpenClaw · 飞书 · 手机网页</span></summary><table class="sync-table"><thead><tr><th>数据源</th><th>版本／协议</th><th>同步状态</th><th>最后同步成功时间（北京时间）</th></tr></thead><tbody id="sync"><tr><td colspan="4">正在读取…</td></tr></tbody></table><p class="muted section-note">同步状态反映当前系统任务；生产数据和核对卡按所选年度分别统计。</p></details>
-<h2 id="overview-title">产能总览</h2><p class="muted section-note">按员工和工序分别统计，每个人单独计算。</p><div id="capacity"></div>
+<h2 id="overview-title">产能总览</h2><p class="muted section-note">徐超超、梅芳按已翻好数量统计下机翻袜产量；李鸿玉、张小翠按已烤好数量统计烤边产量。计件核对只核对数量。</p><div id="capacity"></div>
 <h2 id="daily-title">每日生产产品明细</h2><p class="muted section-note">默认显示最近3个记录日期。未上班、待核实和无记录分别标注，不当作0。</p>
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
 
 <section id="product-total-section" aria-labelledby="product-total-title">
-<h2 id="product-total-title">每日产品总产能</h2><p class="muted section-note">汇总同工序全部员工，下机和烤边独立统计，不受上方员工筛选影响。默认统计截至北京时间昨天的最近5天；电脑端5天、7天全部展示，手机端先展示3天，其余可展开。折叠日期也计入期间累计。无记录、待核实不当作0；张小翠按实际烤边记录计入，无记录不视为缺报。</p>
-<div class="filter-bar"><div class="filter-field"><label for="product-total-range">日期范围</label><select id="product-total-range"><option value="1">最近1天</option><option value="3">最近3天</option><option value="5" selected>最近5天</option><option value="7">最近7天</option><option value="custom">自选日期范围</option></select></div><div class="filter-field total-mobile-filter"><label for="product-total-process">工序</label><select id="product-total-process"><option value="下机">下机产能</option><option value="烤边">烤边产能</option></select></div></div>
+<h2 id="product-total-title">每日产品总产能</h2><p class="muted section-note">徐超超＋梅芳合计为下机翻袜产量；李鸿玉＋张小翠合计为总产量（烤边）。两道工序不相加、不相减推算积压，不受上方员工筛选影响。默认统计截至北京时间昨天的最近5天；电脑端5天、7天全部展示，手机端先展示3天，其余可展开。折叠日期也计入期间累计。无记录、待核实不当作0；张小翠按实际烤边记录计入，无记录不视为缺报。</p>
+<div class="filter-bar"><div class="filter-field"><label for="product-total-range">日期范围</label><select id="product-total-range"><option value="1">最近1天</option><option value="3">最近3天</option><option value="5" selected>最近5天</option><option value="7">最近7天</option><option value="custom">自选日期范围</option></select></div><div class="filter-field total-mobile-filter"><label for="product-total-process">工序</label><select id="product-total-process"><option value="下机">下机翻袜产量</option><option value="烤边">烤边产量</option></select></div></div>
 <div class="filter-bar" id="product-total-custom" hidden><div class="filter-field"><label for="product-total-start">开始日期</label><input id="product-total-start" type="date"></div><div class="filter-field"><label for="product-total-end">结束日期</label><input id="product-total-end" type="date"></div><button id="product-total-query" type="button">查询</button></div>
 <p class="muted section-note" id="product-total-caption"></p><div id="product-total-result" aria-live="polite"></div>
 </section>
 
 <section class="production-comparison" aria-labelledby="comparison-title">
 <h2 id="comparison-title">员工生产对比</h2><p class="muted section-note">默认对比本工序最新有记录的一天 · 已确认数量分别保留；待核实和无记录不当作0，未上班单独标注。</p>
-<div class="filter-bar"><div class="filter-field"><label for="comparison-process">工序</label><select id="comparison-process"><option value="下机">下机 · 徐超超 / 梅芳</option><option value="烤边">烤边 · 李鸿玉 / 张小翠</option></select></div><div class="filter-field"><label for="comparison-mode">日期方式</label><select id="comparison-mode"><option value="latest">最新一天</option><option value="day">单日</option><option value="month">整月</option><option value="range">自定义范围</option></select></div><div class="filter-field" data-comparison-period="month"><label for="comparison-month">月份</label><select id="comparison-month"></select></div><div class="filter-field" data-comparison-period="day" hidden><label for="comparison-day">日期</label><input id="comparison-day" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-start">开始</label><input id="comparison-start" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-end">结束（含当天）</label><input id="comparison-end" type="date"></div></div>
+<div class="filter-bar"><div class="filter-field"><label for="comparison-process">工序</label><select id="comparison-process"><option value="下机">下机翻袜产量 · 徐超超 / 梅芳</option><option value="烤边">烤边产量 · 李鸿玉 / 张小翠</option></select></div><div class="filter-field"><label for="comparison-mode">日期方式</label><select id="comparison-mode"><option value="latest">最新一天</option><option value="day">单日</option><option value="month">整月</option><option value="range">自定义范围</option></select></div><div class="filter-field" data-comparison-period="month"><label for="comparison-month">月份</label><select id="comparison-month"></select></div><div class="filter-field" data-comparison-period="day" hidden><label for="comparison-day">日期</label><input id="comparison-day" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-start">开始</label><input id="comparison-start" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-end">结束（含当天）</label><input id="comparison-end" type="date"></div></div>
 <fieldset class="comparison-products"><legend>对比产品 · 可多选</legend><button class="comparison-all" type="button" id="comparison-all">全部产品</button><div id="comparison-products" style="display:contents"></div></fieldset>
 <div id="comparison-result" aria-live="polite"></div>
 </section>
@@ -192,6 +192,7 @@ function renderTaskHealth(syncRows){
     el.textContent=syncRows.length<3?'同步证据不完整，暂不能判断任务状态':'✓ 当前同步快照未报告故障；业务待确认单独显示';
   }
 }
+function processLabel(process){return process==='下机'?'下机翻袜产量':process==='烤边'?'烤边产量':'待核实';}
 const PRODUCTS=['棉堆堆袜','冰冰袜','小腿袜','过膝袜','女船袜','男船袜'];
 const DEFAULT_WORKERS=[
   {code:'A',person:'A｜徐超超',process:'下机'},
@@ -327,17 +328,17 @@ function summaryCards(workers,records,statusMap,month=''){
     const dates=pendingDates(worker,agg,statusMap,month),pending=dates.length;
     const state=pending?'待核实':hasData?'已确认':'无记录';
     const pendingText=pending?`<span class="pending-dates">待核实 ${pending} 天：${dates.join('、')}</span>`:'';
-    return `<article class="product-card"><header class="product-card-header"><span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span></header><div class="product-card-total"><span>已确认累计</span><strong>${hasData?numberText(agg.total):'—'}<small>双</small></strong></div>${productGrid(hasData?agg.values:PRODUCTS.map(()=>'—'))}<footer class="product-card-footer"><span>${hasData?`有效生产 ${agg.days.size} 天`:'暂无生产数量'}${counts.absent?` · 未上班 ${counts.absent} 天`:''}${pending?` · 待核实 ${pending} 天`:''}${pendingText}</span>${statusHtml(state)}</footer></article>`;
+    return `<article class="product-card"><header class="product-card-header"><span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(processLabel(worker.process))}</span></header><div class="product-card-total"><span>已确认累计</span><strong>${hasData?numberText(agg.total):'—'}<small>双</small></strong></div>${productGrid(hasData?agg.values:PRODUCTS.map(()=>'—'))}<footer class="product-card-footer"><span>${hasData?`有效生产 ${agg.days.size} 天`:'暂无生产数量'}${counts.absent?` · 未上班 ${counts.absent} 天`:''}${pending?` · 待核实 ${pending} 天`:''}${pendingText}</span>${statusHtml(state)}</footer></article>`;
   }).join('')}</div>`;
 }
 function recordCard(worker,rec,state,date=''){
   const subtotal=rec?recordSubtotal(rec):null;
-  const heading=date?`<span class="history-date">${date}</span><span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span>`:`<span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(worker.process)}</span>`;
+  const heading=date?`<span class="history-date">${date}</span><span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(processLabel(worker.process))}</span>`:`<span class="worker-name">${esc(workerName(worker))}</span><span class="process-tag">${esc(processLabel(worker.process))}</span>`;
   return `<article class="product-card"><header class="product-card-header">${heading}</header>${rec?`<div class="product-card-total"><span>${state==='待核实'?'已确认小计':'产量合计'}</span><strong>${subtotal===null?'—':numberText(subtotal)}<small>双</small></strong></div>${productGrid(rec.values.slice(0,6))}<footer class="product-card-footer"><span>产品数量 · 双</span>${statusHtml(state)}</footer>`:`<p class="empty-record">${statusHtml(state)}</p>`}</article>`;
 }
 function prepareFilters(workers,records,statusMap){
   const workerSelect=document.querySelector('#daily-worker');
-  workerSelect.innerHTML='<option value="all">全部员工</option>'+workers.map(w=>`<option value="${esc(w.code)}">${esc(workerName(w))} · ${esc(w.process)}</option>`).join('');
+  workerSelect.innerHTML='<option value="all">全部员工</option>'+workers.map(w=>`<option value="${esc(w.code)}">${esc(workerName(w))} · ${esc(processLabel(w.process))}</option>`).join('');
   workerSelect.value=savedView('worker','all');if(!workerSelect.value)workerSelect.value='all';
   const range=document.querySelector('#daily-range');range.value=savedView('range','3');if(!range.value)range.value='3';
   const monthSelect=document.querySelector('#summary-month');
@@ -487,7 +488,7 @@ function renderProductionComparison(workers,records,statusMap){
   const result=period.valid?buildProductionComparison(workers,records,statusMap,{process:field('process'),start:period.start,end:period.end,products}):{valid:false,error:period.error};
   if(!result.valid){target.innerHTML=`<p class="comparison-empty" role="status">${esc(result.error)}</p>`;return;}
   const viewYear=activeYear,process=field('process'),pair=result.workers,head=`<thead><tr><th scope="col">产品 · 点击展开每日</th><th scope="col">${esc(workerName(pair[0]))}</th><th scope="col">${esc(workerName(pair[1]))}</th><th scope="col">两人合计</th><th scope="col">差额（左 − 右）</th></tr></thead>`;
-  const cards=pair.map((worker,side)=>{const cell=result.totals[side===0?'left':'right'];return `<article class="card"><span class="capacity-name">${esc(workerName(worker))} · ${esc(process)}</span><b>${cell.value===null?'—':numberText(cell.value)} 双</b><small>所选产品已确认量 · 有效生产 ${cell.days} 天${cell.absentDays?` · 未上班 ${cell.absentDays} 天`:''}</small><small>日均 ${cell.average===null?'—'+(cell.missingDates.length?'（数据未完整）':'（暂无生产数量）'):numberText(Number(cell.average.toFixed(2)))+' 双'}${cell.missingDates.length?` · <a href="#comparison-missing" data-comparison-missing>查看 ${cell.missingDates.length} 天待查明细</a>`:''}</small></article>`;}).join('');
+  const cards=pair.map((worker,side)=>{const cell=result.totals[side===0?'left':'right'];return `<article class="card"><span class="capacity-name">${esc(workerName(worker))} · ${esc(processLabel(process))}</span><b>${cell.value===null?'—':numberText(cell.value)} 双</b><small>所选产品已确认量 · 有效生产 ${cell.days} 天${cell.absentDays?` · 未上班 ${cell.absentDays} 天`:''}</small><small>日均 ${cell.average===null?'—'+(cell.missingDates.length?'（数据未完整）':'（暂无生产数量）'):numberText(Number(cell.average.toFixed(2)))+' 双'}${cell.missingDates.length?` · <a href="#comparison-missing" data-comparison-missing>查看 ${cell.missingDates.length} 天待查明细</a>`:''}</small></article>`;}).join('');
   if(!result.dates.length){target.innerHTML=`<p class="comparison-caption">${period.start} 至 ${period.end}（含首尾） · ${products.length}种产品</p><div class="cards comparison-cards">${cards}</div><p class="comparison-empty">该范围暂无本工序两人的记录或出勤状态。</p>`;target.dataset.year=viewYear;target.dataset.process=process;return;}
   const rows=result.rows.map(row=>{
     const open=savedView(`comparison-fold-${process}-${row.productIndex}`,'closed')==='open',colours=comparisonColours(row);
@@ -528,7 +529,7 @@ function syncProductionComparisonViewport(){
   const context=window.__dashboardContext;if(context)prepareProductionComparison(context.workers,context.records,context.statusMap);
 }
 function tableHead(includeProcess=true){
-  return `<thead><tr><th>人员</th>${includeProcess?'<th>工序</th>':''}${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>合计</th><th>有效天数</th><th>状态</th></tr></thead>`;
+  return `<thead><tr><th>人员</th>${includeProcess?'<th>数量口径</th>':''}${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>合计</th><th>有效天数</th><th>状态</th></tr></thead>`;
 }
 function pendingDates(worker,agg,statusMap,month=''){
   const dates=new Set();
@@ -543,13 +544,13 @@ function aggregateRow(worker,agg,statusMap,month=''){
   const meta=`${hasDays?numberText(agg.total):'—'}<br><small>${hasDays?`${agg.days.size}天`:''}${counts.absent?` · 未上班${counts.absent}天`:''}${dates.length?` · 待核实${dates.length}天`:''}</small>`;
   const state=dates.length?'待核实':hasDays?'已确认':'无记录';
   const detail=dates.length?`<span class="pending-dates">${dates.join('、')}</span>`:'';
-  return `<tr><td>${esc(worker.person)}</td><td>${esc(worker.process)}</td>${values}<td class="summary-total">${meta}</td><td>${hasDays?numberText(agg.days.size):'—'}</td><td>${statusHtml(state)}${detail}</td></tr>`;
+  return `<tr><td>${esc(worker.person)}</td><td>${esc(processLabel(worker.process))}</td>${values}<td class="summary-total">${meta}</td><td>${hasDays?numberText(agg.days.size):'—'}</td><td>${statusHtml(state)}${detail}</td></tr>`;
 }
 function renderCapacity(workers,records,statusMap){
   document.querySelector('#capacity').innerHTML=`<div class="cards">${workers.map(worker=>{
     const agg=aggregate(records.filter(r=>r.person===worker.person));
     const pending=pendingDates(worker,agg,statusMap).length;
-    return `<div class="card"><span class="capacity-name">${esc(workerName(worker))} · ${esc(worker.process)}</span><b>${agg.days.size?numberText(agg.total):'—'} 双</b><small>已确认累计 · ${agg.days.size} 个生产日${pending?`<br>待核实 ${pending} 天`:''}</small></div>`;
+    return `<div class="card"><span class="capacity-name">${esc(workerName(worker))} · ${esc(processLabel(worker.process))}</span><b>${agg.days.size?numberText(agg.total):'—'} 双</b><small>已确认累计 · ${agg.days.size} 个生产日${pending?`<br>待核实 ${pending} 天`:''}</small></div>`;
   }).join('')}</div>`;
 }
 function renderPeriodSummary(workers,records,statusMap){
@@ -576,7 +577,7 @@ function renderMonthlyDetail(workers,records,statusMap){
   const foldPrefix=expandRecent?'monthly-desktop-':'monthly-mobile-';
   const groups=dates.map((date,index)=>{
     const open=savedView(foldPrefix+date,expandRecent&&index<5?'open':'closed')==='open';
-    return `<details class="day-fold" data-date="${date}"${open?' open':''}><summary class="day-heading"><span>${date}</span><span>点击展开</span></summary><div class="monthly-day-table desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${makeDailyRows(records,selected,statusMap,[date]).join('')}</tbody></table></div><section class="day-group">${selected.map(worker=>{const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);return recordCard(worker,rec,state,date);}).join('')}</section></details>`;
+    return `<details class="day-fold" data-date="${date}"${open?' open':''}><summary class="day-heading"><span>${date}</span><span>点击展开</span></summary><div class="monthly-day-table desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>数量口径</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${makeDailyRows(records,selected,statusMap,[date]).join('')}</tbody></table></div><section class="day-group">${selected.map(worker=>{const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);return recordCard(worker,rec,state,date);}).join('')}</section></details>`;
   }).join('');
   document.querySelector('#monthly-detail').innerHTML=groups||'<p class="muted">该月份暂无对应明细</p>';
   document.querySelectorAll('#monthly-detail>.day-fold').forEach(el=>el.addEventListener('toggle',()=>saveView(foldPrefix+el.dataset.date,el.open?'open':'closed',viewYear)));
@@ -590,7 +591,7 @@ function makeDailyRows(records,workers,statusMap,dates){
       const rawStatus=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
       const values=rec?rec.values.slice(0,6):PRODUCTS.map(()=> '—');
       const subtotal=rec&&recordSubtotal(rec)!==null?numberText(recordSubtotal(rec)):'—';
-      rows.push(`<tr><td>${date}</td><td>${esc(worker.person)}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(rawStatus)}</td></tr>`);
+      rows.push(`<tr><td>${date}</td><td>${esc(worker.person)}</td><td>${esc(processLabel(rec?.process||worker.process))}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(rawStatus)}</td></tr>`);
     }
   }
   return rows;
@@ -607,7 +608,7 @@ function renderDaily(records,workers,statusMap){
     const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
     return recordCard(worker,rec,state);
   }).join('')}</section>`).join('');
-  document.querySelector('#daily').innerHTML=rows.length?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows.join('')}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无每日记录</p>';
+  document.querySelector('#daily').innerHTML=rows.length?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>员工</th><th>数量口径</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows.join('')}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无每日记录</p>';
 }
 function renderHistory(records,workers,statusMap){
   const viewYear=activeYear;
@@ -620,11 +621,11 @@ function renderHistory(records,workers,statusMap){
       const rec=byKey.get(`${date}|${worker.person}`),state=rec?recordStatus(rec):statusFor(statusMap,date,worker.person);
       const values=rec?rec.values.slice(0,6):PRODUCTS.map(()=>'—');
       const subtotal=rec&&recordSubtotal(rec)!==null?numberText(recordSubtotal(rec)):'—';
-      return `<tr><td>${date}</td><td>${esc(rec?.process||worker.process)}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(state)}</td></tr>`;
+      return `<tr><td>${date}</td><td>${esc(processLabel(rec?.process||worker.process))}</td>${values.map(v=>`<td>${esc(v)}</td>`).join('')}<td class="history-total">${subtotal}</td><td>${statusHtml(state)}</td></tr>`;
     }).join('');
     const mobile=dates.map(date=>{const rec=byKey.get(`${date}|${worker.person}`);return recordCard(worker,rec,rec?recordStatus(rec):statusFor(statusMap,date,worker.person),date);}).join('');
     const open=savedView((window.matchMedia('(max-width:700px)').matches?'history-':'desktop-history-')+worker.code,'closed')==='open';
-    return `<details data-worker="${worker.code}"${open?' open':''}><summary>${esc(workerName(worker))} · ${esc(worker.process)}<span class="history-caption">已确认 ${numberText(agg.total)} 双 · ${dates.length} 条历史记录</span></summary>${rows?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>工序</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无记录</p>'}</details>`;
+    return `<details data-worker="${worker.code}"${open?' open':''}><summary>${esc(workerName(worker))} · ${esc(processLabel(worker.process))}<span class="history-caption">已确认 ${numberText(agg.total)} 双 · ${dates.length} 条历史记录</span></summary>${rows?`<div class="history-wrap desktop-view"><table class="history-table"><thead><tr><th>日期</th><th>数量口径</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认小计</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table></div><div class="mobile-view">${mobile}</div>`:'<p class="muted">暂无记录</p>'}</details>`;
   }).join('')}</div>`;
   document.querySelectorAll('#history details').forEach(el=>el.addEventListener('toggle',()=>saveView((window.matchMedia('(max-width:700px)').matches?'history-':'desktop-history-')+el.dataset.worker,el.open?'open':'closed',viewYear)));
 }
@@ -684,9 +685,9 @@ function renderProductTotals(workers,records,statusMap,latest){
   const blocks=['下机','烤边'].map(process=>{const result=buildProductTotals(workers,records,statusMap,process,start,end),direct=window.matchMedia('(min-width:701px)').matches&&['5','7'].includes(mode),visible=direct?result.days:result.days.slice(0,3),rest=direct?[]:result.days.slice(3);
     const row=d=>`<tr><th scope="row">${d.date}</th>${d.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(d)}<small class="muted">${productTotalCompleteness(d)}</small></td></tr>`;
     const header=`<thead><tr><th>日期</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认合计</th></tr></thead>`;
-    const grid=d=>`<article class="product-card"><header class="product-card-header"><strong>${d.date}</strong><span class="process-tag">${process}</span></header><dl class="product-grid">${PRODUCTS.map((p,i)=>`<div class="product-cell"><dt>${p}</dt><dd>${amount(d.cells[i])}</dd></div>`).join('')}</dl><div class="product-card-total"><span>${d.missing?'已报合计':'已确认合计'}</span><strong>${amount(d)}<small>双</small></strong></div><p class="muted">${productTotalCompleteness(d)}</p></article>`;
+    const grid=d=>`<article class="product-card"><header class="product-card-header"><strong>${d.date}</strong><span class="process-tag">${processLabel(process)}</span></header><dl class="product-grid">${PRODUCTS.map((p,i)=>`<div class="product-cell"><dt>${p}</dt><dd>${amount(d.cells[i])}</dd></div>`).join('')}</dl><div class="product-card-total"><span>${d.missing?'已报合计':'已确认合计'}</span><strong>${amount(d)}<small>双</small></strong></div><p class="muted">${productTotalCompleteness(d)}</p></article>`;
     const foldKey='product-total-fold-'+process+'-'+mode+'-'+start+'-'+end,open=savedView(foldKey,'closed')==='open';
-    return `<section class="product-total-block" data-total-process="${process}"><h3>每日${process}产能</h3><p class="section-note ${result.missing?'state-pending':'muted'}">${productTotalCompleteness(result)} · ${result.missing?'期间累计仅汇总已有数量，待核实部分未当作0。':'按现有台账判断；张小翠无记录不视为缺报。'}</p><div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody>${visible.map(row).join('')}</tbody></table></div><div class="mobile-view">${visible.map(grid).join('')}</div>${rest.length?`<details class="product-total-fold" data-total-fold="${esc(foldKey)}"${open?' open':''}><summary>展开／收起另外${rest.length}天</summary><div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody>${rest.map(row).join('')}</tbody></table></div><div class="mobile-view">${rest.map(grid).join('')}</div></details>`:''}<div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody><tr class="summary-total"><th>期间累计 · ${result.days.length}天</th>${result.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(result)}<small class="muted">${productTotalCompleteness(result)}</small></td></tr></tbody></table></div><div class="mobile-view">${grid({...result,date:`期间累计 · ${result.days.length}天`})}</div></section>`;
+    return `<section class="product-total-block" data-total-process="${process}"><h3>${process==='下机'?'每日下机翻袜产量':'每日烤边产量'}</h3><p class="section-note ${result.missing?'state-pending':'muted'}">${productTotalCompleteness(result)} · ${result.missing?'期间累计仅汇总已有数量，待核实部分未当作0。':'按现有台账判断；张小翠无记录不视为缺报。'}</p><div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody>${visible.map(row).join('')}</tbody></table></div><div class="mobile-view">${visible.map(grid).join('')}</div>${rest.length?`<details class="product-total-fold" data-total-fold="${esc(foldKey)}"${open?' open':''}><summary>展开／收起另外${rest.length}天</summary><div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody>${rest.map(row).join('')}</tbody></table></div><div class="mobile-view">${rest.map(grid).join('')}</div></details>`:''}<div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody><tr class="summary-total"><th>期间累计 · ${result.days.length}天</th>${result.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(result)}<small class="muted">${productTotalCompleteness(result)}</small></td></tr></tbody></table></div><div class="mobile-view">${grid({...result,date:`期间累计 · ${result.days.length}天`})}</div></section>`;
   });target.innerHTML=blocks.join('');
   const selected=document.querySelector('#product-total-process').value;
   target.querySelectorAll('[data-total-process]').forEach(el=>el.classList.toggle('total-mobile-inactive',el.dataset.totalProcess!==selected));

@@ -1,16 +1,29 @@
 # 生产统计工作台部署登记
 
-最后核对时间：2026-10-05（北京时间）
+入口登记更新：2026-10-07（北京时间）。此文件登记入口与核验方式，不替代线上发布回读证据。
 
-| 入口 | 地址 | 当前版本 | 状态 |
-|---|---|---|---|
-| 电脑/统一正式入口 | https://xianer-ai-brain.pages.dev/production-dashboard | GitHub main（2026-10-05） | 最新，已显示核对卡业务状态 |
-| 手机当前入口 | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/ | CloudBase `index.html`（107.31 KB，2026-10-05 12:00） | 最新，已验证显示徐超超待回复状态 |
+| 入口 | 地址 | 用途 |
+|---|---|---|
+| 手机／电脑统一正式入口 | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html | 自动选择年度，也可在页面切换 |
+| 2026 年下半年 | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html?year=2026 | 2026 年下半年台账 |
+| 2027 年全年 | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html?year=2027 | 2027 年全年台账 |
+| 已发布版本清单 | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/release.json | 核对规则版本、源摘要及各年度台账摘要 |
 
-## 判断规则
+## 发布与核验
 
-以后先对比入口页面的“台账快照时间”和 GitHub main 提交；手机入口只有在部署版本追上 GitHub main 后，才标记为“最新”。本次已将最新工作台覆盖到腾讯云 CloudBase，并在手机入口实测页面内容。以后更新 GitHub 后，需重新上传根目录 `index.html`，再核对页面刷新时间和台账快照时间。
+1. `scripts/build_production_dashboard.py` 从同一正式规则和两年度台账生成 `docs/index.html` 与 `docs/release.json`。
+2. `scripts/publish_production_dashboard.py` 将 `index.html` 与 `release.json` 发布到 CloudBase 的 `production-dashboard/` 目录，公开地址回读内容摘要一致后才记为发布成功。
+3. 手机和电脑访问同一正式入口，每 30 秒核查同目录 `release.json`；发现新快照后更新，网络异常时保留当前快照并提示。
+4. 页面中的“网页规则版本”“网站快照已核对”和台账快照时间须与本次发布清单一致；仅有 Git 提交或本地构建成功不能证明线上已更新。
 
-## 当前结论
+## 显示口径
 
-电脑 Cloudflare 与手机腾讯云是两个独立部署；本次两端已同步到最新工作台。手机访问腾讯云测试域名首次可能出现提示，点击“确定访问”即可。
+两年度统一显示“下机翻袜产量”和“烤边产量”。李鸿玉与张小翠同产品的烤边产量合计为“总产量（烤边）”。内部工序仍用“下机／烤边”，年度台账的原有文件名、人员标题与工序列继续保留，解析及数量统计使用原值。
+
+## 历史入口
+
+- 仓库中的 `docs/production-dashboard.html` 现为兼容跳转页，转至同目录 `index.html` 并保留查询参数和页面锚点，避免继续显示内嵌旧台账。是否能通过某个线上旧地址访问该跳转页，取决于该地址所属部署是否已发布此文件。
+- 当前 CloudBase 发布器只发布 `index.html` 与 `release.json`；2026-10-07 回读 `/production-dashboard/production-dashboard.html` 为 404，不把仓库兼容页视为已在线发布。
+- `https://xianer-ai-brain.pages.dev/production-dashboard` 为历史 Cloudflare 入口；尚未完成本轮线上核验，不标记为最新正式入口。
+- CloudBase 域名根目录为旧入口，不作为本轮生产工作台的核验地址。应使用上表包含 `/production-dashboard/index.html` 的完整地址。
+- CloudBase 测试域名首次访问可能显示平台访问提示，通过提示后再核验实际工作台内容。

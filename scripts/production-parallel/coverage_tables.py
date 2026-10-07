@@ -12,6 +12,8 @@ import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
+from quantity_display import quantity_note
+
 VERSION_PATH = Path(__file__).with_name('VERSION.json')
 
 
@@ -196,6 +198,7 @@ def backfill_reminder(code: str, dates: Iterable[str | dt.date]) -> str:
                 "【生产报数待核实】",
                 f"员工：{code}｜{WORKERS[code]}",
                 f"待核实生产日期：{date}",
+                quantity_note(code),
                 "",
                 "当天确实上班但统计中没有记录，请复制下面整段模板填写后发送：",
                 "只把六个 `___` 替换成数字；员工、代号、生产日期、工序和产品名称不要修改或删除。没有生产的项目填写0，六项必须全部保留。",

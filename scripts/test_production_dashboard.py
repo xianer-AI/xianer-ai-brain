@@ -144,6 +144,82 @@ const requestAnimationFrame=callback=>callback();
         prelude += 'window.__LEDGERS__=' + json.dumps(fixture, ensure_ascii=False) + ';\n'
         self.run_node(prelude + script + '\n' + assertions)
 
+    def test_display_labels_preserve_canonical_processes_and_quantities_in_both_years(self):
+        self.annual_browser(r'''
+assert.deepEqual(DEFAULT_WORKERS.map(worker=>worker.process),['下机','下机','烤边','烤边']);
+assert.equal(processLabel('下机'),'下机翻袜产量');
+assert.equal(processLabel('烤边'),'烤边产量');
+assert.equal(processLabel('未知'),'待核实');
+for(const year of ['2026','2027']){
+  activeYear=year;
+  const date=year==='2026'?'2026-10-06':'2027-01-06';
+  const records=DEFAULT_WORKERS.map((worker,index)=>({date,person:worker.person,process:worker.process,values:[String((index+1)*100),'20','0','0','0','0']}));
+  const before=JSON.stringify(records),statuses=new Map();
+  for(const worker of DEFAULT_WORKERS){
+    const record=records.find(row=>row.person===worker.person),label=processLabel(worker.process);
+    for(const markup of [recordCard(worker,record,'已确认',date),summaryCards([worker],records,statuses),aggregateRow(worker,aggregate([record]),statuses),makeDailyRows(records,[worker],statuses,[date]).join('')]){
+      assert.ok(markup.includes(label));
+      assert.doesNotMatch(markup,/>下机<|>烤边</);
+    }
+  }
+  assert.equal(buildProductTotals(DEFAULT_WORKERS,records,statuses,'下机',date,date).value,340);
+  assert.equal(buildProductTotals(DEFAULT_WORKERS,records,statuses,'烤边',date,date).value,740);
+  assert.equal(JSON.stringify(records),before);
+}
+''')
+        template = build.TEMPLATE.read_text()
+        self.assertIn('<option value="下机">下机翻袜产量</option>', template)
+        self.assertIn('<option value="烤边">烤边产量</option>', template)
+        self.assertIn('李鸿玉＋张小翠合计为总产量（烤边）', template)
+        self.assertNotIn('下机翻袜完成量', template)
+        self.assertNotIn('烤边完成量', template)
+        self.assertNotIn('本地显示预览', template)
+
+    def test_product_total_labels_keep_desktop_days_and_mobile_fold_behavior(self):
+        self.annual_browser(r'''
+const elements=new Map();
+const element=selector=>{
+  if(!elements.has(selector))elements.set(selector,{value:'',innerHTML:'',textContent:'',hidden:false,querySelectorAll(){return [];}});
+  return elements.get(selector);
+};
+const document={querySelector:element};
+for(const year of ['2026','2027']){
+  activeYear=year;
+  const latest=year==='2026'?'2026-10-06':'2027-01-06';
+  for(const desktop of [true,false]){
+    window.matchMedia=()=>({matches:desktop});
+    for(const mode of ['1','3','5','7']){
+      element('#product-total-range').value=mode;
+      element('#product-total-process').value='烤边';
+      renderProductTotals(DEFAULT_WORKERS,[],new Map(),latest);
+      const markup=element('#product-total-result').innerHTML;
+      assert.match(markup,/data-total-process="下机"><h3>每日下机翻袜产量/);
+      assert.match(markup,/data-total-process="烤边"><h3>每日烤边产量/);
+      assert.match(markup,/class="process-tag">下机翻袜产量/);
+      assert.match(markup,/class="process-tag">烤边产量/);
+      assert.equal(markup.includes('product-total-fold'),!desktop&&Number(mode)>3);
+      assert.ok(element('#product-total-caption').textContent.includes(latest));
+    }
+  }
+}
+''')
+
+    def test_legacy_entry_redirect_preserves_year_query_and_anchor(self):
+        legacy = (build.ROOT / 'docs/production-dashboard.html').read_text()
+        self.assertNotIn('__LEDGER__', legacy)
+        self.assertNotIn('__DASHBOARD_RELEASE__', legacy)
+        script = legacy.split('<script>', 1)[1].split('</script>', 1)[0]
+        for directory, year in (('/', '2026'), ('/production-dashboard/', '2027')):
+            with self.subTest(directory=directory, year=year):
+                address = f'https://example.test{directory}production-dashboard.html?year={year}&_sync=123#product-total-title'
+                self.run_node('const assert=require("node:assert/strict");' +
+                              'const incoming=new URL(' + json.dumps(address) + ');' +
+                              'const location={href:incoming.href,search:incoming.search,hash:incoming.hash,replace(value){this.replacement=value;}};' +
+                              'const link={};const document={getElementById(id){assert.equal(id,"dashboard-link");return link;}};' +
+                              script +
+                              'const target=new URL(location.replacement);assert.equal(target.pathname,' + json.dumps(directory + 'index.html') + ');' +
+                              'assert.equal(target.search,incoming.search);assert.equal(target.hash,incoming.hash);assert.equal(link.href,target.href);')
+
     def test_display_classification_and_partial_total(self):
         self.annual_browser(r"""
 assert.equal(syncDisplayState('上传失败'),'fault');

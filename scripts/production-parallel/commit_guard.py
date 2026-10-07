@@ -3,6 +3,7 @@ import argparse,fcntl,json,subprocess,base64,sys,re,tempfile,hashlib,os,time
 from pathlib import Path
 import queue_store as q
 from service import DB
+from quantity_display import quantity_note
 LEDGER_ENDPOINTS = {
     2026: 'repos/xianer-AI/xianer-ai-brain/contents/袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md',
     2027: 'repos/xianer-AI/xianer-ai-brain/contents/袜子生产制造袜子厂/库存记录/2027全年下机白胚半成品统计.md',
@@ -105,6 +106,9 @@ def format_success_receipt(report, source, confirmation, commit, reread_note):
  if report.get('status_only'):
   lines += ['• 处理结果：已记录出勤状态，未写入生产明细、产量或累计', '']
  else:
+  note=quantity_note(report.get('worker'))
+  if note:
+   lines += [note, '']
   total=report.get('total')
   if total is None: total=sum(int(items[p]) for p in PRODUCTS if p in items)
   for product in PRODUCTS:
