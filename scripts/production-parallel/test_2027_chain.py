@@ -201,6 +201,10 @@ class AnnualChainTests(unittest.TestCase):
         # template text and rows must survive the history append operation.
         for line in self.before[self.before.index('## 附录：审计与版本记录'):].splitlines():
             if line.strip():
+                # Current-version rows are derived from the release manifest;
+                # historical audit rows remain byte-for-byte protected.
+                if re.match(r'^\| (GitHub|OpenClaw|飞书) \| \*\*', line):
+                    line = re.sub(r'\*\*V[^*]+\*\*', '**'+writer.coverage_tables.version_info()['workbench_version']+'**', line, count=1)
                 self.assertIn(line, candidate[audit_start:])
 
     def test_new_year_cutoff_and_explicit_history_are_routed_by_production_day(self):

@@ -5,18 +5,18 @@
   ],
   "builder_sha256": "4130ec9e2e3e70857433c949fa9273fcf1a5ef0ec8a749e3c41ef04581e328bc",
   "card_protocol_version": "CARD-INTERACTIVE-1",
-  "generated_at": "2026-10-07T10:22:53+00:00",
-  "ledger_sha256": "29e57685364bb9e73ee3412636b7f018720a1e9fcb77c77565e2c428861307de",
+  "generated_at": "2026-10-07T13:53:58+00:00",
+  "ledger_sha256": "a0e9deb84e44ca5f65eee0981932e8222dd0c4000a1754f83f502948c0ee08bb",
   "ledgers_sha256": {
-    "2026": "29e57685364bb9e73ee3412636b7f018720a1e9fcb77c77565e2c428861307de",
-    "2027": "e4306e5b9ce963e0fc470173b590fd02b39e028999a8b91f669de7be61da9dc3"
+    "2026": "a0e9deb84e44ca5f65eee0981932e8222dd0c4000a1754f83f502948c0ee08bb",
+    "2027": "f41e5e16302912c3a187a38b0b111ccb075d1c12aadb28b69179e0046e7b581f"
   },
   "release_status": "正式",
-  "rules_release_id": "2026-10-06-v1.18",
+  "rules_release_id": "2026-10-07-v1.19",
   "schema": 1,
-  "source_digest": "7b14ea1f67fced9b5432a10de0a62059fc07af9b79124c55cc686cd6fd5d67e5",
+  "source_digest": "310307cfe9932a53cb47b6215afb4e05e6d6d5a523ea954dc1782e9771edc57b",
   "sync_protocol_version": "S1",
   "template_sha256": "80cc5177eb8397e2bffbbb9f446addeacf304810beb62a12a3b4b73f274fcbfa",
-  "version_sha256": "8cc5cb772fa80ba3b8dbb19bb66803a5f17110956b04becb7a1a3af2406aa029",
-  "workbench_version": "V1.18"
+  "version_sha256": "b6ece00123eb9299646b033fb874209c64bba1154cc746dd0a3a694abf9d8f8c",
+  "workbench_version": "V1.19"
 }
