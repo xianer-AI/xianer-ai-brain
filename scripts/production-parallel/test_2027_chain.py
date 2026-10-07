@@ -226,7 +226,8 @@ class AnnualChainTests(unittest.TestCase):
         for content in ['查询2027年1月徐超超产能', '汇总2027年12月全部员工产能',
                         '分析2026年12月31日到2027年1月1日的历史产量']:
             event = {'content': content, 'timestamp': '2028-01-01T20:00:00+08:00'}
-            self.assertIsNone(service.fast_extract(event))
+            fast = service.fast_extract(event)
+            self.assertTrue(fast is None or fast['extracted']['kind'] == 'other')
             self.assertIsNone(hermes_extract.deterministic_report(event))
 
     def test_2027_partial_zero_recovery_preserves_known_values_and_unique_task(self):

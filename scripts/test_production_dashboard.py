@@ -81,7 +81,7 @@ class PublisherTests(unittest.TestCase):
         cls.publisher = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.publisher)
 
-    def test_public_readback_checks_both_real_files(self):
+    def test_public_readback_checks_snapshot_and_legacy_entry(self):
         module = self.publisher
         class Response:
             status = 200
@@ -89,11 +89,59 @@ class PublisherTests(unittest.TestCase):
             def __enter__(self): return self
             def __exit__(self, *args): pass
             def read(self): return self.body
-        with patch.object(module.urllib.request, 'urlopen', side_effect=[Response(b'html'), Response(b'manifest')]) as opener:
-            module.verify_public({'index.html': build.sha256(b'html'), 'release.json': build.sha256(b'manifest')})
+        with patch.object(module.urllib.request, 'urlopen', side_effect=[Response(b'html'), Response(b'manifest'), Response(b'redirect'), Response(b'redirect')]) as opener:
+            module.verify_public({'index.html': build.sha256(b'html'), 'release.json': build.sha256(b'manifest'),
+                                  'production-dashboard.html': build.sha256(b'redirect'),
+                                  '/index.html': build.sha256(b'redirect')})
         urls = [call.args[0].full_url for call in opener.call_args_list]
         self.assertIn('/index.html?_verify=', urls[0])
         self.assertIn('/release.json?_verify=', urls[1])
+        self.assertIn('/production-dashboard.html?_verify=', urls[2])
+        self.assertTrue(urls[3].startswith('https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/index.html?_verify='))
+
+    def test_missing_or_changed_legacy_entry_is_published_without_ledger_change(self):
+        module = self.publisher
+        snapshot = build.render_snapshot('<script>run();</script>', '台账', VERSION)
+        for old_legacy in (None, b'old redirect'):
+            with self.subTest(old_legacy=old_legacy), tempfile.TemporaryDirectory() as tmp:
+                directory = Path(tmp)
+                state = directory / 'state.json'
+                compatibility = directory / 'production-dashboard.html'
+                compatibility.write_bytes(b'latest redirect')
+                old_hashes = {'index.html': build.sha256(snapshot[0]), 'release.json': build.sha256(snapshot[1])}
+                if old_legacy is not None:
+                    old_hashes['production-dashboard.html'] = build.sha256(old_legacy)
+                state.write_text(json.dumps({'digest': snapshot[2]['source_digest'],
+                                             'verified_unix': module.time.time(), 'public_sha256': old_hashes}))
+                executable = directory / 'tcb'; executable.touch()
+
+                def inspect_deploy(command, **kwargs):
+                    staged = Path(command[3])
+                    self.assertNotIn('--prune', command)
+                    if command[4] == 'production-dashboard':
+                        self.assertEqual({path.name for path in staged.iterdir()},
+                                         {'index.html', 'release.json', 'production-dashboard.html'})
+                        self.assertEqual((staged / 'production-dashboard.html').read_bytes(), b'latest redirect')
+                    else:
+                        self.assertEqual(command[4], 'index.html')
+                        self.assertTrue(staged.is_file())
+                        self.assertEqual(staged.read_bytes(), b'latest redirect')
+                    return subprocess.CompletedProcess(command, 0, 'ok', '')
+
+                with patch.multiple(module, STATE=state, LOCK=directory / 'lock', LOG=directory / 'log',
+                                    TCB=executable, COMPATIBILITY_FILES={'production-dashboard.html': compatibility}), \
+                        patch.object(module, 'capture_snapshot', return_value=snapshot), \
+                        patch.object(module.subprocess, 'run', side_effect=inspect_deploy) as deploy, \
+                        patch.object(module, 'verify_public') as readback:
+                    self.assertEqual(module.main(), 0)
+                    expected = dict(old_hashes, **{'production-dashboard.html': build.sha256(b'latest redirect'),
+                                                   '/index.html': build.sha256(b'latest redirect')})
+                    readback.assert_called_once_with(expected)
+                    self.assertEqual(json.loads(state.read_text())['public_sha256'], expected)
+                    self.assertEqual(module.main(), 0)
+                    self.assertEqual(deploy.call_count, 2)
+                    self.assertEqual([call.args[0][4] for call in deploy.call_args_list],
+                                     ['production-dashboard', 'index.html'])
 
     def test_stale_online_html_is_not_success(self):
         class Response:
@@ -119,6 +167,24 @@ class PublisherTests(unittest.TestCase):
                     patch.object(module, 'verify_public', side_effect=RuntimeError('still stale')), \
                     patch.object(module.time, 'sleep'):
                 self.assertEqual(module.main(), 1)
+            self.assertEqual(json.loads(state.read_text())['digest'], 'old')
+
+    def test_failed_root_compatibility_publish_does_not_record_success(self):
+        module = self.publisher
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            state = directory / 'state.json'
+            state.write_text('{"digest":"old"}')
+            executable = directory / 'tcb'; executable.touch()
+            snapshot = build.render_snapshot('<script>run();</script>', '台账', VERSION)
+            with patch.multiple(module, STATE=state, LOCK=directory / 'lock', LOG=directory / 'log', TCB=executable), \
+                    patch.object(module, 'capture_snapshot', return_value=snapshot), \
+                    patch.object(module.subprocess, 'run', side_effect=[
+                        subprocess.CompletedProcess([], 0, 'ok', ''),
+                        subprocess.CompletedProcess([], 1, '', 'single-file upload failed'),
+                    ]), patch.object(module, 'verify_public') as readback:
+                self.assertEqual(module.main(), 1)
+                readback.assert_not_called()
             self.assertEqual(json.loads(state.read_text())['digest'], 'old')
 
 
@@ -217,7 +283,8 @@ for(const year of ['2026','2027']){
                               'const location={href:incoming.href,search:incoming.search,hash:incoming.hash,replace(value){this.replacement=value;}};' +
                               'const link={};const document={getElementById(id){assert.equal(id,"dashboard-link");return link;}};' +
                               script +
-                              'const target=new URL(location.replacement);assert.equal(target.pathname,' + json.dumps(directory + 'index.html') + ');' +
+                              'const target=new URL(location.replacement);assert.equal(target.origin,"https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com");' +
+                              'assert.equal(target.pathname,"/production-dashboard/index.html");' +
                               'assert.equal(target.search,incoming.search);assert.equal(target.hash,incoming.hash);assert.equal(link.href,target.href);')
 
     def test_display_classification_and_partial_total(self):

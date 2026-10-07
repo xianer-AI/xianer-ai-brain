@@ -5,18 +5,24 @@ on:
     branches: [main]
     paths:
       - 'scripts/production-parallel/**'
+      - 'scripts/group-companion/openclaw-gate.mjs'
+      - 'scripts/group-companion/test_openclaw_gate_display.mjs'
       - 'scripts/build_production_dashboard.py'
       - 'scripts/publish_production_dashboard.py'
       - 'scripts/test_production_dashboard.py'
       - 'docs/dashboard.template.html'
+      - 'docs/production-dashboard.html'
       - '.github/workflows/production-parallel-tests.yml'
   pull_request:
     paths:
       - 'scripts/production-parallel/**'
+      - 'scripts/group-companion/openclaw-gate.mjs'
+      - 'scripts/group-companion/test_openclaw_gate_display.mjs'
       - 'scripts/build_production_dashboard.py'
       - 'scripts/publish_production_dashboard.py'
       - 'scripts/test_production_dashboard.py'
       - 'docs/dashboard.template.html'
+      - 'docs/production-dashboard.html'
       - '.github/workflows/production-parallel-tests.yml'
   workflow_dispatch:
 
@@ -39,3 +45,5 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python3 -m unittest discover -s scripts -p test_production_dashboard.py -v
+      - name: 运行更正显示与只读查询入口回归
+        run: node --test scripts/group-companion/test_openclaw_gate_display.mjs

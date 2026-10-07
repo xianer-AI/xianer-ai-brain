@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -26,12 +27,15 @@ STATE = Path("/Users/xianer/.openclaw/state/production-parallel/cloudbase-dashbo
 LOG = Path("/Users/xianer/.openclaw/logs/cloudbase-dashboard-publish.log")
 LOCK = Path("/Users/xianer/.openclaw/state/production-parallel/cloudbase-dashboard-publish.lock")
 PUBLIC_URL = f"https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/{CLOUD_PATH}/index.html"
+COMPATIBILITY_FILES = {
+    'production-dashboard.html': REPO / 'docs/production-dashboard.html',
+}
 
 
 def verify_public(expected: dict[str, str]) -> None:
     """A CLI success alone does not prove the files served to a phone changed."""
     for filename, expected_hash in expected.items():
-        url = PUBLIC_URL.rsplit('/', 1)[0] + '/' + filename + '?_verify=' + str(time.time_ns())
+        url = urllib.parse.urljoin(PUBLIC_URL, filename) + '?_verify=' + str(time.time_ns())
         request = urllib.request.Request(url, headers={'Cache-Control': 'no-cache'})
         with urllib.request.urlopen(request, timeout=20) as response:
             if response.status != 200 or sha256(response.read()) != expected_hash:
@@ -63,17 +67,25 @@ def main() -> int:
             return 1
         try:
             rendered, manifest, release = capture_snapshot()
+            compatibility = {name: path.read_bytes() for name, path in COMPATIBILITY_FILES.items()}
         except Exception as exc:
             log(f'publish failed: snapshot build {type(exc).__name__}: {str(exc)[:250]}')
             return 1
         current = release['source_digest']
+        compatibility_hashes = {name: sha256(content) for name, content in compatibility.items()}
+        # The domain root was a separate old production page. Update only its
+        # index.html file, never deploy a directory to the domain root.
+        compatibility_hashes['/index.html'] = compatibility_hashes['production-dashboard.html']
         previous = {}
         if STATE.is_file():
             try:
                 previous = json.loads(STATE.read_text(encoding="utf-8"))
             except Exception:
                 previous = {}
-        if previous.get('digest') == current and previous.get('public_sha256'):
+        previous_hashes = previous.get('public_sha256') or {}
+        if (previous.get('digest') == current and previous_hashes
+                and all(previous_hashes.get(name) == digest
+                        for name, digest in compatibility_hashes.items())):
             # Keep the content digest stable; a generated timestamp alone never causes a deploy.
             if time.time() - previous.get('verified_unix', 0) < 300:
                 return 0
@@ -85,11 +97,14 @@ def main() -> int:
                 return 0
             except Exception as exc:
                 log(f'public verification failed; republishing: {type(exc).__name__}')
-        public_hashes = {'index.html': sha256(rendered), 'release.json': sha256(manifest)}
+        public_hashes = {'index.html': sha256(rendered), 'release.json': sha256(manifest),
+                         **compatibility_hashes}
         with tempfile.TemporaryDirectory(prefix="cloudbase-production-dashboard-") as tmp:
             output = Path(tmp) / "index.html"
             output.write_bytes(rendered)
             (Path(tmp) / 'release.json').write_bytes(manifest)
+            for filename, content in compatibility.items():
+                (Path(tmp) / filename).write_bytes(content)
             command = [
                 str(TCB),
                 "hosting",
@@ -102,18 +117,24 @@ def main() -> int:
                 "--verify",
                 "--json",
             ]
+            root_command = [
+                str(TCB), "hosting", "deploy",
+                str(Path(tmp) / 'production-dashboard.html'), "index.html",
+                "-e", ENV_ID, "--safe", "--verify", "--json",
+            ]
             publish_env = dict(os.environ)
             node_bin = "/Users/xianer/.local/share/fnm/node-versions/v24.21.0/installation/bin"
             publish_env["PATH"] = node_bin + ":" + publish_env.get("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
-            try:
-                result = subprocess.run(command, text=True, capture_output=True, timeout=120, env=publish_env)
-            except Exception as exc:
-                log(f'publish failed: {type(exc).__name__}')
-                return 1
-            if result.returncode != 0:
-                detail = (result.stderr or result.stdout).strip().replace("\n", " ")
-                log(f"publish failed rc={result.returncode} {detail[:500]}")
-                return result.returncode
+            for deployment in (command, root_command):
+                try:
+                    result = subprocess.run(deployment, text=True, capture_output=True, timeout=120, env=publish_env)
+                except Exception as exc:
+                    log(f'publish failed: {type(exc).__name__}')
+                    return 1
+                if result.returncode != 0:
+                    detail = (result.stderr or result.stdout).strip().replace("\n", " ")
+                    log(f"publish failed rc={result.returncode} {detail[:500]}")
+                    return result.returncode
         # CDN propagation may take a few seconds. Never record success before readback matches.
         for attempt in range(4):
             try:

@@ -3,6 +3,7 @@ import sys,json,contextlib,os,re
 from datetime import datetime,timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from readonly_query import is_readonly_production_query, readonly_query_result
 ROOT=Path('/Users/xianer/.hermes/hermes-agent')
 SHANGHAI=ZoneInfo('Asia/Shanghai')
 sys.path.insert(0,str(ROOT))
@@ -45,6 +46,8 @@ def deterministic_report(event):
  # Fixed six-product reports are safe to parse locally. This keeps a provider
  # outage from losing a report while leaving free-form messages to Hermes.
  content=str(event.get('content') or '')
+ if is_readonly_production_query(content):
+  return None
  text=re.sub(r'```(?:[A-Za-z_+-]+)?','',content).replace('```','')
  # Capacity/历史统计 requests may contain numbers after product names
  # (for example “小腿袜：1台”). They are query inputs, never production rows.
@@ -105,6 +108,8 @@ def deterministic_report(event):
 def extract(event):
  # Confirmation is a control message, never delegate it to the model.
  content=str(event.get('content') or '').strip()
+ if is_readonly_production_query(content):
+  return readonly_query_result()
  if re.fullmatch(r'(?:准确|确认|确认上传)(?:\s+om_[A-Za-z0-9_-]+)?', content):
   return {'agent':'确定性规则','draft_only':True,'extracted':{'kind':'confirmation','worker':'unknown','production_date':None,'items':[],'missing':[],'notes':['本地规则识别确认消息']}}
  local=deterministic_report(event)

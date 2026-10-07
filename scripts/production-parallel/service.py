@@ -5,6 +5,7 @@ import queue_store as q
 import recovery_scan
 import missing_alerts
 from hermes_extract import auto_production_date
+from readonly_query import is_readonly_production_query, readonly_query_result
 HERE=Path(__file__).resolve().parent
 DB=os.environ.get('PRODUCTION_INBOX_DB',str(Path.home()/'.openclaw/state/production-parallel/inbox.sqlite'))
 PYTHON='/Users/xianer/.hermes/hermes-agent/venv/bin/python'
@@ -25,6 +26,8 @@ def recovery_due(last_run, now, interval=RECOVERY_INTERVAL):
 def fast_extract(event):
  """Parse the fixed six-product employee format without starting a model."""
  content=str(event.get('content') or '')
+ if is_readonly_production_query(content):
+  return readonly_query_result()
  # Capacity/machine analysis is read-only; numbers followed by 台 are not
  # production quantities. Keep this guard before product parsing.
  if re.search(r'(?:机台|产能|历史产量|平均一天|每款产品)', content) and not re.search(r'(?:报数|补报|上报|更正|纠正)', content):

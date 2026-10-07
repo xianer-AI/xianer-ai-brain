@@ -178,7 +178,7 @@ def handle_template(message_id: str, sender: str, content: str,
         identity = conn.execute("SELECT platform FROM worker_identity WHERE worker=?", (worker,)).fetchone()
     target_sender = identity["platform"] if identity else sender
     if target_sender != sender and sender != review_cards.OWNER:
-        return {"handled": True, "text": "补报模板已收到，但发送账号与梅芳的已核实账号不一致，请由员工本人发送。"}
+        return {"handled": True, "text": f"补报模板已收到，但发送账号与{WORKERS[worker][0]}的已核实账号不一致，请由员工本人发送。"}
     source = str(message_id or "")
     if not re.fullmatch(r"om_[A-Za-z0-9_-]+", source):
         return {"handled": True, "text": "补报模板消息凭证无效，请重新整段发送一次。"}

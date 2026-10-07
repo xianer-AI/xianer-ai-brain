@@ -1124,6 +1124,14 @@ def _recover_verified_remote(receipt_path, endpoint, remote_text, report, source
         f'远程对账恢复成功：GitHub 当前台账已包含来源 {source}、确认 {confirmation}，'
         f'并与 {report.get("name")} {report.get("production_date")} 的当前任务一致'
     )
+    # The deterministic builder uses a set for membership checks. Persist a
+    # separate JSON-safe report so a lost PUT response can finish recovery
+    # without changing the original confirmed quantities or reissuing a PUT.
+    persisted_report = dict(report)
+    if 'missing_products' in persisted_report:
+        persisted_report['missing_products'] = [
+            product for product in PRODUCTS if product in (report['missing_products'] or ())
+        ]
     receipt = {
         'source': source,
         'confirmation': confirmation,
@@ -1133,7 +1141,7 @@ def _recover_verified_remote(receipt_path, endpoint, remote_text, report, source
         'guard': 'remote reconciliation after missing local receipt',
         'endpoint': endpoint,
         'backfill': bool(report.get('backfill')),
-        'report': report,
+        'report': persisted_report,
     }
     try:
         receipt['message'] = commit_guard.format_success_receipt(

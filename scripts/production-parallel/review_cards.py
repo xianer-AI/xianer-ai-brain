@@ -4,6 +4,7 @@ import urllib.error
 from pathlib import Path
 import queue_store as q
 import card_builder
+from quantity_display import summary_quantity_note
 GROUP='oc_1f8587b1bcde12a0d1bb6053ab2b748a'
 OWNER='ou_de130236fb86ee826e0f5653f05bc9c6'
 # Upload failures must never invalidate an employee's confirmed batch.  The
@@ -556,6 +557,12 @@ def scan_card_delivery(db, resend=False):
  for row in rows:
   results.append(deliver_card(db,row['token'],is_resend=resend or bool(row.get('last_delivery_at'))))
  return results
+def _action_display_result(result, card):
+ """Decorate an authenticated response without changing the durable action."""
+ if result.get('action')!='modify' or card['card_kind']=='status':return result
+ note=summary_quantity_note(str(card['summary'] or ''))
+ return dict(result,quantity_note=note) if note else result
+
 def act(db,token,action,sender,group,callback):
  init(db)
  if not callback.startswith('card-action-'):raise ValueError('必须从本人核对卡片操作')
@@ -565,7 +572,8 @@ def act(db,token,action,sender,group,callback):
   c.execute('BEGIN IMMEDIATE');r=c.execute('SELECT * FROM review_cards WHERE token=?',(token,)).fetchone()
   if not r or r['sender']!=sender or r['grp']!=group:raise ValueError('这张核对卡片不属于你或当前群')
   if _verified_upload_receipt(db, r['source']):raise ValueError('该批次已上传，旧核对卡已停用')
-  if r['callback']==callback and r['result']:return json.loads(r['result'])
+  if r['callback']==callback and r['result']:
+   return _action_display_result(json.loads(r['result']),r)
   if r['expires']<time.time() or r['state']!='pending':raise ValueError('卡片已过期或失效，请重新核对')
   blocked=c.execute("""SELECT token FROM confirmation_receipts
     WHERE source=? AND status='blocked' ORDER BY created DESC LIMIT 1""", (r['source'],)).fetchone()
@@ -605,7 +613,7 @@ def act(db,token,action,sender,group,callback):
      json.dumps(result),action,action,callback,token))
   if action=='confirm':
    _queue_confirmation_receipt(c,callback,sender,group,'准确',r['source'],token)
- return result
+ return _action_display_result(result,r)
 def act_text(db,text,sender,group,callback):
  """Bind a direct human confirmation to the sender's newest pending card."""
  if not re.fullmatch(r'(?:准确|确认|确认上传)(?:\s+om_[A-Za-z0-9_-]+)?', text.strip()):

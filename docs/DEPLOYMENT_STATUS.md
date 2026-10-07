@@ -12,7 +12,7 @@
 ## 发布与核验
 
 1. `scripts/build_production_dashboard.py` 从同一正式规则和两年度台账生成 `docs/index.html` 与 `docs/release.json`。
-2. `scripts/publish_production_dashboard.py` 将 `index.html` 与 `release.json` 发布到 CloudBase 的 `production-dashboard/` 目录，公开地址回读内容摘要一致后才记为发布成功。
+2. `scripts/publish_production_dashboard.py` 将 `index.html`、`release.json` 与历史入口兼容页 `production-dashboard.html` 发布到 CloudBase 的 `production-dashboard/` 目录；另以明确的单文件上传，将同一兼容页放到域名根 `index.html`。四个公开文件的回读内容摘要均一致后才记为发布成功。两个兼容入口都纳入发布变更判断，兼容页单独发生变化也会触发发布；只改变快照生成时间不会反复发布。
 3. 手机和电脑访问同一正式入口，每 30 秒核查同目录 `release.json`；发现新快照后更新，网络异常时保留当前快照并提示。
 4. 页面中的“网页规则版本”“网站快照已核对”和台账快照时间须与本次发布清单一致；仅有 Git 提交或本地构建成功不能证明线上已更新。
 
@@ -22,8 +22,8 @@
 
 ## 历史入口
 
-- 仓库中的 `docs/production-dashboard.html` 现为兼容跳转页，转至同目录 `index.html` 并保留查询参数和页面锚点，避免继续显示内嵌旧台账。是否能通过某个线上旧地址访问该跳转页，取决于该地址所属部署是否已发布此文件。
-- 当前 CloudBase 发布器只发布 `index.html` 与 `release.json`；2026-10-07 回读 `/production-dashboard/production-dashboard.html` 为 404，不把仓库兼容页视为已在线发布。
-- `https://xianer-ai-brain.pages.dev/production-dashboard` 为历史 Cloudflare 入口；尚未完成本轮线上核验，不标记为最新正式入口。
-- CloudBase 域名根目录为旧入口，不作为本轮生产工作台的核验地址。应使用上表包含 `/production-dashboard/index.html` 的完整地址。
+- 仓库中的 `docs/production-dashboard.html` 为兼容跳转页，转至上表 CloudBase 绝对正式地址，保留年度等查询参数和页面锚点。不会继续显示内嵌旧台账，也不会因部署目录不同而跳进其他网站首页。
+- CloudBase 历史兼容地址为 `https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/production-dashboard.html`，由同一发布器上传和公开回读。是否已在线生效，以发布状态文件中的该文件摘要及公开回读为准，不能仅依据本登记或 Git 提交判断。
+- `https://xianer-ai-brain.pages.dev/production-dashboard` 与 `/production-dashboard.html` 为历史 Cloudflare 生产入口；2026-10-07 用浏览器 User-Agent 回读为 HTTP 200，仍显示 V1.17；该域名根目录显示 V1.19。默认程序 User-Agent 曾返回 403，不能据此推断站点不可用或缺少部署权限。仓库无 Cloudflare 发布工作流或 Wrangler 配置，GitHub 部署列表为空，尚未确定该站的部署渠道。此次不覆盖整个 Cloudflare 站点，也不标记这些地址已完成升级；取得该站部署配置后，只设置生产路径到上述正式地址的兼容跳转并复核参数、锚点。
+- CloudBase 域名根目录 `/` 和 `/index.html` 改前回读为 V1.17 生产页，内容摘要与历史 Cloudflare 生产页一致，历史部署登记也确认它曾是手机生产入口。发布器现将根 `index.html` 单文件替换为兼容页，不上传目录到根路径、不使用 `--prune`、不删除或修改藤条等其他工具。`/production-dashboard` 及 `/production-dashboard/` 能访问当前正式页面；今后分享使用上表包含 `/production-dashboard/index.html` 的完整地址。根入口在线升级是否完成仍以公开回读为准。
 - CloudBase 测试域名首次访问可能显示平台访问提示，通过提示后再核验实际工作台内容。

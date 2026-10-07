@@ -133,6 +133,11 @@ export function isStatusRequest(content){
 }
 export function looksLikeReport(content){
  const text=String(content||'');
+ // A clear read-only lookup can quote products and quantities. Keep it out
+ // of the report acknowledgement path, without swallowing explicit reports.
+ if (/^\s*(?:小文[，,\s]*)?(?:请|麻烦)?(?:帮我)?(?:查一下|查询|查看|查下|看一下|看下)/.test(text)
+     && /(?:产量|产能|记录|入账|数量|总量|报表|汇总|统计)/.test(text)
+     && !/(?:报数|补报|上报|更正|纠正|撤销)/.test(text)) return false;
  // Product names plus numbers also occur in capacity questions (e.g.
  // “小腿袜：1台、冰冰袜：8台”). Those are read-only analysis requests.
  if (/(?:统计|汇总|分析|产能|历史记录|平均|机台|机器|每款|按.*为准)/.test(text)
@@ -167,7 +172,8 @@ export async function cardAction(event,ctx,run){
  try{
   const result=await run({text,id:event.messageId||ctx.messageId,sender:event.senderId||ctx.senderId,group:GROUP});
   if(result.action==='confirm')return; // Native model receives authenticated click; guard validates persisted receipt.
-  return {handled:true,text:result.action==='modify'?'收到更正，谢谢说明！这批先不上传，请发送更正后的完整数量，我会重新给你核对。':'收到，谢谢说明！这批已暂缓上传，需要时再重新核对。'};
+  const quantityNote=result.action==='modify' && result.quantity_note?`\n${result.quantity_note}`:'';
+  return {handled:true,text:result.action==='modify'?`收到更正，谢谢说明！这批先不上传，请发送更正后的完整数量，我会重新给你核对。${quantityNote}`:'收到，谢谢说明！这批已暂缓上传，需要时再重新核对。'};
  }catch{return {handled:true,text:'旧核对按钮已停用。请直接回复“准确”，或回复“修改数量”并写出正确数量。'};}
 }
 export function backfillChoice(event,ctx){
