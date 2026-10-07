@@ -941,6 +941,22 @@ assert.equal(snapshotSyncState({...release,release_status:'测试'},rows,checks)
 '''
         self.run_node(code)
 
+    def test_resumed_page_and_restored_network_check_immediately(self):
+        template = build.TEMPLATE.read_text()
+        events = template.split('// Suspended mobile tabs', 1)[1].split('let seconds=30;', 1)[0]
+        self.run_node("""
+const assert=require('node:assert/strict');
+let checks=0;const checkPublishedSnapshot=()=>checks++;
+const listeners={};
+const document={visibilityState:'hidden',addEventListener:(event,fn)=>listeners[event]=fn};
+const window={addEventListener:(event,fn)=>listeners[event]=fn};
+""" + '// Suspended mobile tabs' + events + """
+listeners.visibilitychange();assert.equal(checks,0);
+document.visibilityState='visible';listeners.visibilitychange();assert.equal(checks,1);
+listeners.pageshow();assert.equal(checks,2);
+listeners.online();assert.equal(checks,3);
+""")
+
     def test_browser_no_cache_check_update_and_network_failure(self):
         template = build.TEMPLATE.read_text()
         functions = 'function cacheBypassUrl' + template.split('function cacheBypassUrl', 1)[1].split('function renderAlerts', 1)[0]

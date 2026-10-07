@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -72,6 +73,15 @@ def render_snapshot(template: str, ledger: str, version: dict, *, generated_at: 
 def capture_snapshot() -> tuple[bytes, bytes, dict]:
     # Hash the exact bytes read into this snapshot; do not hash and reread later.
     ledgers = {year: path.read_text(encoding='utf-8') for year, path in LEDGERS.items()}
+    # A generated page must never publish an unchecked accounting snapshot.
+    guard_directory = ROOT / '袜子生产制造袜子厂'
+    if str(guard_directory) not in sys.path:
+        sys.path.insert(0, str(guard_directory))
+    from production_summary_guard import check_daily_summary
+    from guard_production_ledger import check
+    for text in ledgers.values():
+        check_daily_summary(text)
+        check(text, text)
     return render_snapshot(TEMPLATE.read_text(encoding='utf-8'), ledgers['2026'],
                            json.loads(VERSION.read_text(encoding='utf-8')),
                            builder_hash=sha256(Path(__file__).read_bytes()), ledgers=ledgers)

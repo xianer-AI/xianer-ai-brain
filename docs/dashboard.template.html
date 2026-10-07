@@ -769,5 +769,9 @@ checkPublishedSnapshot();
 if(performance.getEntriesByType('navigation')[0]?.type==='reload'||new URL(location.href).searchParams.has('_sync'))requestAnimationFrame(()=>window.scrollTo(0,Number(savedView('scroll','0'))));
 window.addEventListener('pagehide',()=>saveView('scroll',String(window.scrollY)));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkPublishedSnapshot();});
+// Suspended mobile tabs and restored connections check without waiting for a timer.
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkPublishedSnapshot();});
+window.addEventListener('pageshow',()=>checkPublishedSnapshot());
+window.addEventListener('online',()=>checkPublishedSnapshot());
 let seconds=30;setInterval(()=>{seconds--;const el=document.querySelector('#next-refresh');if(el)el.textContent=`下次核查：${seconds} 秒`;if(seconds<=0){seconds=30;if(window.__productTotalsUpdate&&productTotalsLastCutoff!==productTotalsCutoff())window.__productTotalsUpdate();checkPublishedSnapshot();}},1000);
 </script>
