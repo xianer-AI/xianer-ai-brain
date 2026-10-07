@@ -416,6 +416,61 @@ assert.equal(comparisonDateValid('2027-02-29'),false);
 assert.equal(comparisonDateValid('2027-04-31'),false);
 ''')
 
+    def test_desktop_comparison_latest_date_uses_selected_pair_and_real_records(self):
+        self.comparison_browser('''
+const records=[record(workerA,'2027-01-02',[10,0,0,0,0,0]),record(workerB,'2027-01-03',['核实',0,0,0,0,0]),
+  record(workerC,'2027-01-07',[20,0,0,0,0,0]),record(workerD,'2027-01-06',[10,0,0,0,0,0]),
+  record(workerA,'2027-02-30',[1,0,0,0,0,0]),record(workerA,'2026-12-31',[1,0,0,0,0,0]),
+  record(workerA,'2027-01-08',[1,0,0,0,0,0],'烤边')];
+const statuses=attendance([[workerA,'2027-12-31','待核实'],[workerB,'2027-01-20','已确认未上班']]);
+assert.equal(latestComparisonDate(DEFAULT_WORKERS,records,statuses,'下机','2027'),'2027-01-03');
+assert.equal(latestComparisonDate(DEFAULT_WORKERS,records,statuses,'烤边','2027'),'2027-01-07');
+assert.equal(latestComparisonDate(DEFAULT_WORKERS,[],statuses,'下机','2027'),'2027-01-20');
+const absent=attendance([[workerC,'2027-01-29','已确认未上班'],[workerA,'2027-01-10','已确认未上班'],[workerB,'2027-01-30','已报待查']]);
+assert.equal(latestComparisonDate(DEFAULT_WORKERS,[],absent,'下机','2027'),'2027-01-10');
+const summer=[record(workerA,'2026-06-30',[99,0,0,0,0,0]),record(workerA,'2026-07-01',[0,0,0,0,0,0])];
+assert.equal(latestComparisonDate(DEFAULT_WORKERS,summer,new Map(),'下机','2026'),'2026-07-01');
+''')
+
+    def test_desktop_comparison_latest_default_migrates_old_cache_and_advances_with_new_data(self):
+        self.desktop_comparison_browser('''
+const records=[record(workerA,'2027-01-03',[10,0,0,0,0,0]),record(workerB,'2027-01-03',[5,0,0,0,0,0]),record(workerC,'2027-01-07',[20,0,0,0,0,0])];
+const statuses=attendance([[workerA,'2027-12-31','待核实']]);
+prepareProductionComparison(DEFAULT_WORKERS,records,statuses);
+assert.equal(element('#comparison-mode').value,'latest');
+assert.match(element('#comparison-result').innerHTML,/2027-01-03 至 2027-01-03/);
+assert.equal(periodFields.every(field=>field.hidden),true);
+assert.equal(element('#comparison-day').value,'2027-01-01');
+const newer=[...records,record(workerA,'2027-01-04',[30,0,0,0,0,0])];
+prepareProductionComparison(DEFAULT_WORKERS,newer,statuses);
+assert.match(element('#comparison-result').innerHTML,/2027-01-04 至 2027-01-04/);
+element('#comparison-process').value='烤边';renderProductionComparison(DEFAULT_WORKERS,newer,statuses);
+assert.match(element('#comparison-result').innerHTML,/2027-01-07 至 2027-01-07/);
+assert.equal(element('#comparison-day').value,'2027-01-01');
+''', local_storage={
+            'production-view-2027-comparison-mode': 'month',
+            'production-view-2027-comparison-month': '2027-12',
+            'production-view-2027-comparison-day': '2027-01-01',
+        })
+
+    def test_desktop_comparison_latest_preserves_new_manual_date_choices(self):
+        self.desktop_comparison_browser('''
+const records=[record(workerA,'2027-01-03',[10,0,0,0,0,0]),record(workerB,'2027-01-03',[5,0,0,0,0,0]),record(workerA,'2027-01-07',[20,0,0,0,0,0])];
+const statuses=new Map();window.__dashboardContext={workers:DEFAULT_WORKERS,records,statusMap:statuses};
+prepareProductionComparison(DEFAULT_WORKERS,records,statuses);
+const changeMode=mode=>{const input=element('#comparison-mode');input.value=mode;input.matches=()=>false;element('.production-comparison').listeners.change({target:input});};
+changeMode('day');element('#comparison-day').value='2027-01-03';saveView('comparison-day','2027-01-03');
+renderProductionComparison(DEFAULT_WORKERS,records,statuses);
+changeMode('latest');assert.match(element('#comparison-result').innerHTML,/2027-01-07 至 2027-01-07/);
+changeMode('day');assert.equal(element('#comparison-day').value,'2027-01-03');
+assert.match(element('#comparison-result').innerHTML,/2027-01-03 至 2027-01-03/);
+assert.equal(savedView('comparison-date-mode','latest'),'day');
+const newer=[...records,record(workerA,'2027-01-08',[25,0,0,0,0,0])];
+prepareProductionComparison(DEFAULT_WORKERS,newer,statuses);
+assert.equal(element('#comparison-mode').value,'day');assert.match(element('#comparison-result').innerHTML,/2027-01-03 至 2027-01-03/);
+for(const mode of ['month','range']){saveView('comparison-date-mode',mode);prepareProductionComparison(DEFAULT_WORKERS,newer,statuses);assert.equal(element('#comparison-mode').value,mode);}
+''')
+
     def test_desktop_comparison_preferences_and_folds_survive_snapshot_boot_and_year_switch(self):
         self.desktop_comparison_browser('''
 const records=[record(workerC,'2027-01-02',[10,20,30,40,50,60]),record(workerD,'2027-01-02',[5,15,25,35,45,55])];
@@ -441,7 +496,7 @@ refresh=()=>{
   prepareProductionComparison(DEFAULT_WORKERS,yearRecords,statuses);
 };
 selectDashboardYear('2026');
-assert.equal(element('#comparison-process').value,'下机');assert.equal(element('#comparison-mode').value,'month');
+assert.equal(element('#comparison-process').value,'下机');assert.equal(element('#comparison-mode').value,'latest');
 assert.equal(element('#comparison-month').value,'2026-10');assert.deepEqual(comparisonSelectedProducts(),[1]);
 assert.equal(element('#comparison-day').min,'2026-07-01');assert.equal(element('#comparison-day').max,'2026-12-31');
 assert.match(element('#comparison-result').innerHTML,/data-comparison-product="1" aria-expanded="true"/);
@@ -452,7 +507,7 @@ assert.match(element('#comparison-result').innerHTML,/data-comparison-product="2
 assert.equal(savedView('worker','all'),'C');assert.equal(savedView('desktop-history-C','closed'),'open');
 ''', local_storage={
             'production-view-2027-comparison-process': '烤边',
-            'production-view-2027-comparison-mode': 'range',
+            'production-view-2027-comparison-date-mode': 'range',
             'production-view-2027-comparison-month': '2027-01',
             'production-view-2027-comparison-start': '2027-01-01',
             'production-view-2027-comparison-end': '2027-01-03',

@@ -46,8 +46,8 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
 
 <section class="production-comparison" aria-labelledby="comparison-title">
-<h2 id="comparison-title">员工生产对比</h2><p class="muted section-note">同工序两人对比 · 已确认数量分别保留；待核实和无记录不当作0，未上班单独标注。</p>
-<div class="filter-bar"><div class="filter-field"><label for="comparison-process">工序</label><select id="comparison-process"><option value="下机">下机 · 徐超超 / 梅芳</option><option value="烤边">烤边 · 李鸿玉 / 张小翠</option></select></div><div class="filter-field"><label for="comparison-mode">日期方式</label><select id="comparison-mode"><option value="month">整月</option><option value="day">单日</option><option value="range">自定义范围</option></select></div><div class="filter-field" data-comparison-period="month"><label for="comparison-month">月份</label><select id="comparison-month"></select></div><div class="filter-field" data-comparison-period="day" hidden><label for="comparison-day">日期</label><input id="comparison-day" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-start">开始</label><input id="comparison-start" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-end">结束（含当天）</label><input id="comparison-end" type="date"></div></div>
+<h2 id="comparison-title">员工生产对比</h2><p class="muted section-note">默认对比本工序最新有记录的一天 · 已确认数量分别保留；待核实和无记录不当作0，未上班单独标注。</p>
+<div class="filter-bar"><div class="filter-field"><label for="comparison-process">工序</label><select id="comparison-process"><option value="下机">下机 · 徐超超 / 梅芳</option><option value="烤边">烤边 · 李鸿玉 / 张小翠</option></select></div><div class="filter-field"><label for="comparison-mode">日期方式</label><select id="comparison-mode"><option value="latest">最新一天</option><option value="day">单日</option><option value="month">整月</option><option value="range">自定义范围</option></select></div><div class="filter-field" data-comparison-period="month"><label for="comparison-month">月份</label><select id="comparison-month"></select></div><div class="filter-field" data-comparison-period="day" hidden><label for="comparison-day">日期</label><input id="comparison-day" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-start">开始</label><input id="comparison-start" type="date"></div><div class="filter-field" data-comparison-period="range" hidden><label for="comparison-end">结束（含当天）</label><input id="comparison-end" type="date"></div></div>
 <fieldset class="comparison-products"><legend>对比产品 · 可多选</legend><button class="comparison-all" type="button" id="comparison-all">全部产品</button><div id="comparison-products" style="display:contents"></div></fieldset>
 <div id="comparison-result" aria-live="polite"></div>
 </section>
@@ -420,15 +420,23 @@ function buildProductionComparison(workers,records,statusMap,options={}){
   return {workers:pair,dates,rows,totals:comparison(rollup(totalDays[0]),rollup(totalDays[1])),missing,valid:true,error:''};
 }
 let comparisonEventController=null,comparisonPreparedYear=null;
+function latestComparisonDate(workers,records,statusMap,process,year=activeYear){
+  const codes=process==='下机'?['A','B']:['C','D'],people=new Set(workers.filter(worker=>worker.process===process&&codes.includes(worker.code)).map(worker=>worker.person));
+  const minimum=`${year}-${String(PERIODS[year].firstMonth).padStart(2,'0')}-01`,maximum=year+'-12-31';
+  const valid=date=>comparisonDateValid(date)&&date>=minimum&&date<=maximum;
+  const dates=records.filter(rec=>people.has(rec.person)&&(!rec.process||rec.process===process)&&valid(rec.date)).map(rec=>rec.date);
+  if(dates.length)return dates.sort().pop();
+  const resolved=[...statusMap.entries()].filter(([key,status])=>key[10]==='|'&&people.has(key.slice(11))&&valid(key.slice(0,10))&&/已确认|未上班/.test(String(status))&&!/待查|核实|待处理/.test(String(status))).map(([key])=>key.slice(0,10));
+  return resolved.sort().pop()||defaultMonth(year,[],new Map())+'-01';
+}
 function readComparisonPreferences(workers,records,statusMap){
-  const month=defaultMonth(activeYear,records,statusMap),savedProducts=savedView('comparison-products','0,1,2,3,4,5');
-  const latest=[...records.map(rec=>rec.date),...[...statusMap.keys()].map(key=>key.slice(0,10))].filter(date=>date.startsWith(month)).sort().pop()||month+'-01';
-  return {process:savedView('comparison-process','下机'),mode:savedView('comparison-mode','month'),month:savedView('comparison-month',month),day:savedView('comparison-day',latest),start:savedView('comparison-start',month+'-01'),end:savedView('comparison-end',month+'-'+String(new Date(Date.UTC(Number(activeYear),Number(month.slice(5,7)),0)).getUTCDate()).padStart(2,'0')),products:savedProducts==='none'?[]:savedProducts.split(',').filter(item=>/^\d$/.test(item)).map(Number).filter(index=>index<PRODUCTS.length)};
+  const process=savedView('comparison-process','下机'),latest=latestComparisonDate(workers,records,statusMap,process),month=latest.slice(0,7),savedProducts=savedView('comparison-products','0,1,2,3,4,5');
+  return {process,mode:savedView('comparison-date-mode','latest'),month:savedView('comparison-month',month),day:savedView('comparison-day',latest),start:savedView('comparison-start',month+'-01'),end:savedView('comparison-end',month+'-'+String(new Date(Date.UTC(Number(activeYear),Number(month.slice(5,7)),0)).getUTCDate()).padStart(2,'0')),products:savedProducts==='none'?[]:savedProducts.split(',').filter(item=>/^\d$/.test(item)).map(Number).filter(index=>index<PRODUCTS.length)};
 }
 function prepareProductionComparison(workers,records,statusMap){
   if(!window.matchMedia('(min-width:701px)').matches)return;
   const preferences=readComparisonPreferences(workers,records,statusMap),months=monthsForYear(activeYear);
-  for(const [id,value] of [['process',preferences.process],['mode',preferences.mode]]){const select=document.querySelector('#comparison-'+id);select.value=value;if(!select.value)select.value=id==='process'?'下机':'month';}
+  for(const [id,value] of [['process',preferences.process],['mode',preferences.mode]]){const select=document.querySelector('#comparison-'+id);select.value=value;if(!select.value)select.value=id==='process'?'下机':'latest';}
   const month=document.querySelector('#comparison-month');month.innerHTML=months.map(value=>`<option value="${value}">${monthLabel(value)}</option>`).join('');month.value=preferences.month;if(!month.value)month.value=defaultMonth(activeYear,records,statusMap);
   for(const id of ['day','start','end']){const input=document.querySelector('#comparison-'+id);input.min=`${activeYear}-${String(PERIODS[activeYear].firstMonth).padStart(2,'0')}-01`;input.max=activeYear+'-12-31';input.value=preferences[id];}
   document.querySelector('#comparison-products').innerHTML=PRODUCTS.map((product,index)=>`<label><input type="checkbox" value="${index}"${preferences.products.includes(index)?' checked':''}>${esc(product)}</label>`).join('');
@@ -452,7 +460,8 @@ function renderProductionComparison(workers,records,statusMap){
   if(!window.matchMedia('(min-width:701px)').matches)return;
   const field=id=>document.querySelector('#comparison-'+id).value,mode=field('mode');
   document.querySelectorAll('[data-comparison-period]').forEach(element=>element.hidden=element.dataset.comparisonPeriod!==mode);
-  const period=comparisonPeriod(mode,field('month'),field('day'),field('start'),field('end'),activeYear),products=comparisonSelectedProducts(),target=document.querySelector('#comparison-result');
+  const day=mode==='latest'?latestComparisonDate(workers,records,statusMap,field('process')):field('day');
+  const period=comparisonPeriod(mode==='latest'?'day':mode,field('month'),day,field('start'),field('end'),activeYear),products=comparisonSelectedProducts(),target=document.querySelector('#comparison-result');
   const result=period.valid?buildProductionComparison(workers,records,statusMap,{process:field('process'),start:period.start,end:period.end,products}):{valid:false,error:period.error};
   if(!result.valid){target.innerHTML=`<p class="comparison-empty" role="status">${esc(result.error)}</p>`;return;}
   const viewYear=activeYear,process=field('process'),pair=result.workers,head=`<thead><tr><th scope="col">产品 · 点击展开每日</th><th scope="col">${esc(workerName(pair[0]))}</th><th scope="col">${esc(workerName(pair[1]))}</th><th scope="col">两人合计</th><th scope="col">差额（左 − 右）</th></tr></thead>`;
@@ -474,7 +483,7 @@ function bindProductionComparison(){
     if(!window.matchMedia('(min-width:701px)').matches)return;
     const input=event.target;
     if(input.matches('#comparison-products input'))saveView('comparison-products',comparisonSelectedProducts().join(',')||'none');
-    else if(/^comparison-(process|mode|month|day|start|end)$/.test(input.id))saveView(input.id,input.value);
+    else if(/^comparison-(process|mode|month|day|start|end)$/.test(input.id))saveView(input.id==='comparison-mode'?'comparison-date-mode':input.id,input.value);
     else return;
     const context=window.__dashboardContext;if(context)renderProductionComparison(context.workers,context.records,context.statusMap);
   },{signal});
