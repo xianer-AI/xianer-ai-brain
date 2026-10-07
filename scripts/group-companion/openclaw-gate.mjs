@@ -51,7 +51,7 @@ export async function gate(event,ctx,route=lookup,api=null,status=runStatus){
    if(confirmation.already_dispatched)return {handled:true,text:'这批生产数据已经上传并完成核验，不会重复计量。'};
    if(confirmation.already_processing)return {handled:true,text:'这批生产数据已经收到，正在补偿处理中，不会重复计量。'};
    const claimed=await claimConfirmationDispatch(confirmationId);
-   if(!claimed.claimed)return {handled:true,text:'已收到“准确”，这批数据正在补偿处理中，不会重复计量。'};
+   if(!claimed.claimed)return {handled:true,text:'已收到“准确”，正在核验并处理这批数据，请勿重复报数；上传成功后会发送回执。'};
    let workerSettled=false;
    const pid=await startUploadAgent({source,confirmation:confirmationId,group:GROUP},{
     onError:async(error,output)=>{

@@ -83,7 +83,7 @@ def _summary(record):
         identity_line = f"老板代报：{extracted['worker']}={names[extracted['worker']]} 请核实"
     else:
         identity_line = '身份：待核实（不能据此自动归入 A/B/C/D）'
-    label = '历史缺项补核（保留已有数量，不是今天产能）' if extracted.get('historical_supplement') else '网络恢复后补处理'
+    label = '历史缺项补核（保留已有数量，不是今天产能）' if extracted.get('historical_supplement') else '请核对本次生产报数'
     lines = [label, identity_line,
              f"生产日：{extracted.get('production_date') or '待核实'}"]
     total = 0

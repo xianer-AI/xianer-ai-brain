@@ -221,6 +221,10 @@ def claim_confirmation_dispatch(db,message_id):
  """Atomically reserve one pending confirmation for one upload worker."""
  init(db); now=time.time()
  with q.conn(db) as c:
+  # Binding can precede the inbox parser. Waiting is not an upload attempt.
+  confirmation=c.execute("SELECT status FROM inbox WHERE id=?",(message_id,)).fetchone()
+  if not confirmation or confirmation['status'] in ('queued','processing'):
+   return False
   row=c.execute("SELECT status,next_at,worker_pid,source FROM confirmation_receipts WHERE message_id=?",(message_id,)).fetchone()
   if row and row['status']=='dispatching' and row['next_at']<=now and row['worker_pid']:
    try:

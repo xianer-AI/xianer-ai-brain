@@ -11,6 +11,36 @@ import review_cards
 
 
 class ReviewCardRetryTests(unittest.TestCase):
+    def ready_confirmation(self, db, message_id):
+        q.put(db, {'messageId': message_id, 'senderId': 'ou_a',
+                   'groupId': review_cards.GROUP, 'content': '准确'})
+        with q.conn(db) as c:
+            c.execute("UPDATE inbox SET status='ready', result=? WHERE id=?",
+                      (json.dumps({'extracted': {'kind': 'confirmation'}}), message_id))
+
+    def test_parser_wait_does_not_claim_or_consume_attempt_and_recovers(self):
+        with tempfile.TemporaryDirectory() as d:
+            db = str(Path(d) / 'inbox.sqlite')
+            review_cards.init(db)
+            with q.conn(db) as c:
+                c.execute("""INSERT INTO confirmation_receipts
+                    (message_id,sender,grp,text,source,token,status,attempts,next_at,created)
+                    VALUES ('om_wait','ou_a',?,'准确','om_source','tok','pending_dispatch',0,0,0)""", (review_cards.GROUP,))
+            self.assertFalse(review_cards.claim_confirmation_dispatch(db, 'om_wait'))
+            q.put(db, {'messageId':'om_wait','senderId':'ou_a','groupId':review_cards.GROUP,'content':'准确'})
+            self.assertFalse(review_cards.claim_confirmation_dispatch(db, 'om_wait'))
+            job=q.claim(db)
+            self.assertFalse(review_cards.claim_confirmation_dispatch(db, 'om_wait'))
+            with q.conn(db) as c:
+                row=c.execute("SELECT status,attempts FROM confirmation_receipts WHERE message_id='om_wait'").fetchone()
+                self.assertEqual(tuple(row), ('pending_dispatch',0))
+            q.finish(db,'om_wait',job['lease'],{'extracted':{'kind':'confirmation'}})
+            # Reopen through the durable API, as a restarted retry worker does.
+            self.assertEqual(review_cards.pending_confirmations(db)[0]['message_id'],'om_wait')
+            self.assertTrue(review_cards.claim_confirmation_dispatch(db,'om_wait'))
+            self.assertFalse(review_cards.claim_confirmation_dispatch(db,'om_wait'))
+
+
     def test_init_migrates_active_legacy_missing_text_to_zero_review_text(self):
         with tempfile.TemporaryDirectory() as d:
             db = str(Path(d) / 'inbox.sqlite')
@@ -267,6 +297,7 @@ class ReviewCardRetryTests(unittest.TestCase):
             with q.conn(db) as c:
                 receipt = c.execute("SELECT source,token,status FROM confirmation_receipts WHERE message_id='om_conf2'").fetchone()
             self.assertEqual(tuple(receipt), ('om_source', 'abcdef123456', 'pending_dispatch'))
+            self.ready_confirmation(db, 'om_conf2')
             self.assertTrue(review_cards.claim_confirmation_dispatch(db, 'om_conf2'))
             self.assertFalse(review_cards.claim_confirmation_dispatch(db, 'om_conf2'))
             with q.conn(db) as c:
@@ -341,6 +372,7 @@ class ReviewCardRetryTests(unittest.TestCase):
 
             pending = review_cards.pending_confirmations(db, now)
             self.assertEqual([row['message_id'] for row in pending], ['om_lost'])
+            self.ready_confirmation(db, 'om_lost')
             self.assertTrue(review_cards.claim_confirmation_dispatch(db, 'om_lost'))
             self.assertFalse(review_cards.claim_confirmation_dispatch(db, 'om_lost'))
 
@@ -395,6 +427,7 @@ class ReviewCardRetryTests(unittest.TestCase):
                     VALUES ('om_claimed','ou_a',?,'准确','om_source','tok',
                             'pending_dispatch',NULL,0,0,0)""", (review_cards.GROUP,))
             for expected in range(1, 4):
+                self.ready_confirmation(db, 'om_claimed')
                 self.assertTrue(review_cards.claim_confirmation_dispatch(db, 'om_claimed'))
                 review_cards.mark_confirmation_dispatch_failed(db, 'om_claimed', '真实失败')
                 review_cards.mark_confirmation_dispatch_failed(db, 'om_claimed', '重复失败事件')

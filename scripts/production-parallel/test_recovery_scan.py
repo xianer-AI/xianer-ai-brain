@@ -40,7 +40,8 @@ class RecoveryScanTests(unittest.TestCase):
         with q.conn(self.db) as c:
             row = c.execute("SELECT state, summary FROM review_cards WHERE source='om_source_1'").fetchone()
         self.assertEqual(row['state'], 'pending')
-        self.assertIn('网络恢复后补处理', row['summary'])
+        self.assertNotIn('网络恢复后补处理', row['summary'])
+        self.assertIn('请核对本次生产报数', row['summary'])
         self.assertIn('身份：A=徐超超 请核实', row['summary'])
         self.assertIn('棉堆堆袜：200 双', row['summary'])
         self.assertIn('冰冰袜：100 双', row['summary'])
