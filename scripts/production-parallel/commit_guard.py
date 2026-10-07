@@ -232,7 +232,18 @@ def run_original_ledger_guard(before, after):
   if r.returncode:
    detail=(r.stderr.strip() or r.stdout.strip() or '未知校验错误')
    raise ValueError('原有 guard_production_ledger.py 拦截候选：'+detail)
-  return (r.stdout.strip() or 'guard_production_ledger.py 校验通过')
+  summary_path=guard_path.with_name('production_summary_guard.py')
+  if not LEDGER_GUARD_PATH:
+   raw=gh_read(['api',
+    'repos/xianer-AI/xianer-ai-brain/contents/袜子生产制造袜子厂/production_summary_guard.py?ref=main',
+    '--jq','.content'])
+   summary_path.write_bytes(base64.b64decode(raw))
+  if not summary_path.is_file():
+   raise ValueError('缺少每日/月度汇总校验程序，禁止上传')
+  summary=subprocess.run([sys.executable,str(summary_path),str(after_path)],text=True,capture_output=True)
+  if summary.returncode:
+   raise ValueError('汇总校验拦截候选：'+(summary.stderr.strip() or summary.stdout.strip()))
+  return (r.stdout.strip() or 'guard_production_ledger.py 校验通过')+'；'+summary.stdout.strip()
 
 def validate(db,source_id,confirmation_id):
  a=q.get(db,source_id);b=q.get(db,confirmation_id)

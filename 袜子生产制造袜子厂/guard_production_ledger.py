@@ -263,6 +263,44 @@ def check_annual_blocks(text: str, rows: dict[str, Record]) -> None:
                 )
 
 
+def check_monthly_summary(text: str, rows: dict[str, Record] | None = None) -> None:
+    """Check every published employee/month slot against effective detail rows."""
+    rows = records(text) if rows is None else rows
+    headings = list(re.finditer(r"^## [^\n]*?(20\d{2})年(\d{1,2})月月度汇总\s*$", text, re.M))
+    if not headings:
+        raise ValueError("缺少月度汇总区，禁止发布")
+    seen = set()
+    for heading in headings:
+        year, month = int(heading[1]), int(heading[2])
+        period = (year, month)
+        if period in seen:
+            raise ValueError(f"{year}年{month}月月度汇总重复")
+        seen.add(period)
+        tail = text[heading.end():]
+        stop = re.search(r"^#{2,3} ", tail, re.M)
+        block = tail[:stop.start()] if stop else tail
+        expected_all = _period_totals(rows.values(), date(year, month, 1), _month_end(year, month))
+        for code, name in WORKERS.items():
+            matches = re.findall(r"^\| " + re.escape(code + "｜" + name) + r" \| (.+) \|$", block, re.M)
+            if len(matches) != 1:
+                raise ValueError(f"{year}年{month}月月度汇总 {name} 行缺失或重复")
+            shown = [part.strip() for part in matches[0].split("|")]
+            effective = [r for r in rows.values() if r.code == code and _effective(r)
+                         and (r.record_date.year, r.record_date.month) == period]
+            dates = {r.record_date for r in effective}
+            values = expected_all[code]
+            quantities = [str(values[p]) for p in PRODUCTS] + [str(sum(values.values()))]
+            if not dates:
+                quantities = ["—"] * 7
+            expected = ["下机" if code in "AB" else "烤边", *quantities,
+                        f"{len(dates)}日", max(dates).isoformat() if dates else "—"]
+            if shown != expected:
+                raise ValueError(f"{year}年{month}月月度汇总 {name} 与有效明细不一致：显示 {shown}，应为 {expected}")
+    required = {(r.record_date.year, r.record_date.month) for r in rows.values() if _effective(r)}
+    if required - seen:
+        raise ValueError(f"有效明细缺少月度汇总：{sorted(required - seen)}")
+
+
 def check(before: str, after: str) -> None:
     previous, current = records(before), records(after)
     for key, value in previous.items():
@@ -275,6 +313,7 @@ def check(before: str, after: str) -> None:
         raise ValueError("来源/确认消息丢失：" + ", ".join(sorted(lost_messages)))
     check_month_blocks(after, current)
     check_annual_blocks(after, current)
+    check_monthly_summary(after, current)
     print(f"校验通过：保留旧记录 {len(previous)} 条，现有 {len(current)} 条，个人/月度累计吻合")
 
 

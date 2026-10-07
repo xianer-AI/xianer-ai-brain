@@ -7,6 +7,8 @@ on:
       - '袜子生产制造袜子厂/guard_production_ledger.py'
       - '袜子生产制造袜子厂/production_summary_guard.py'
       - '袜子生产制造袜子厂/test_production_summary_guard.py'
+      - '袜子生产制造袜子厂/test_monthly_summary_integrity.py'
+      - 'scripts/production-parallel/**'
       - '.github/workflows/production-ledger-guard.yml'
   push:
     branches: [main]
@@ -16,6 +18,8 @@ on:
       - '袜子生产制造袜子厂/guard_production_ledger.py'
       - '袜子生产制造袜子厂/production_summary_guard.py'
       - '袜子生产制造袜子厂/test_production_summary_guard.py'
+      - '袜子生产制造袜子厂/test_monthly_summary_integrity.py'
+      - 'scripts/production-parallel/**'
       - '.github/workflows/production-ledger-guard.yml'
 jobs:
   verify:
@@ -51,4 +55,6 @@ jobs:
             '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md'
           python3 '袜子生产制造袜子厂/production_summary_guard.py' \
             '袜子生产制造袜子厂/库存记录/2027全年下机白胚半成品统计.md'
-          python3 -m unittest '袜子生产制造袜子厂/test_production_summary_guard.py'
+          python3 -m unittest '袜子生产制造袜子厂/test_production_summary_guard.py' '袜子生产制造袜子厂/test_monthly_summary_integrity.py'
+          cp '袜子生产制造袜子厂/库存记录/2026下半年下机白胚半成品统计.md' /tmp/ledger-current.md
+          python3 -m unittest discover -s scripts/production-parallel -p 'test_*.py'

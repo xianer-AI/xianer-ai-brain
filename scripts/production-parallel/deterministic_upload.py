@@ -578,6 +578,39 @@ def _update_annual(text, worker, totals, missing_products=None, latest=None):
     return text[:start] + '\n'.join(lines).rstrip('\n') + '\n' + text[end:]
 
 
+def rebuild_monthly_summaries(text):
+    """Rebuild ALL displayed months, including history changed by a revocation.
+
+    Every slot is derived from effective detail records. Source records and
+    attendance states are preserved; empty months retain dashes rather than
+    invented zero production.
+    """
+    headings = list(re.finditer(r'^## [^\n]*?(20\d{2})年(\d{1,2})月月度汇总\s*$', text, re.M))
+    for heading in reversed(headings):
+        year, month = heading[1], int(heading[2])
+        period = f'{year}-{month:02d}'
+        start = heading.end()
+        stop = re.search(r'^#{2,3} ', text[start:], re.M)
+        end = start + stop.start() if stop else len(text)
+        lines = text[start:end].splitlines()
+        for worker, (name, process) in WORKERS.items():
+            try:
+                totals, dates = _records(text, worker, period)
+            except RuntimeError as exc:
+                if str(exc) != '新增后没有可计算的员工明细':
+                    raise
+                totals, dates = ({p: 0 for p in PRODUCTS}, set())
+            values = [totals[p] for p in PRODUCTS] + [sum(totals.values())] if dates else ['—'] * 7
+            fields = [f'{worker}｜{name}', process, *values, f'{len(dates)}日', max(dates) if dates else '—']
+            target = fields[0]
+            matches = [i for i, line in enumerate(lines) if line.startswith('| ' + target + ' |')]
+            if len(matches) != 1:
+                raise ValueError(f'{period} 月度汇总 {target} 行缺失或重复')
+            lines[matches[0]] = '| ' + ' | '.join(str(v) for v in fields) + ' |'
+        text = text[:start] + '\n'.join(lines).rstrip('\n') + '\n' + text[end:]
+    return text
+
+
 def _update_monthly(text, worker, totals, dates, latest):
     year, month = latest[:4], int(latest[5:7])
     bounds = _month_section_bounds(text, year, month)
@@ -823,6 +856,7 @@ def _update_coverage(text, worker, dates, latest, *, pending_queue=None,
     per month.  Empty cells are informational only; they are not upload or
     attendance decisions.
     """
+    text = rebuild_monthly_summaries(text)
     marker = '## 人员生产记录覆盖情况'
     start = text.find(marker)
     if start < 0:
@@ -1049,7 +1083,7 @@ def build_candidate(before, report, source, confirmation):
         after = _update_log(after, report, source, confirmation)
         if before.endswith('\n') and not after.endswith('\n'):
             after += '\n'
-        return after
+        return rebuild_monthly_summaries(after)
     if report.get('historical_supplement'):
         from historical_supplement import apply_missing
         after, merged = apply_missing(before, worker, latest, report['historical_supplement'], source, confirmation)
@@ -1073,7 +1107,7 @@ def build_candidate(before, report, source, confirmation):
     after = _update_log(after, report, source, confirmation)
     if before.endswith('\n') and not after.endswith('\n'):
         after += '\n'
-    return after
+    return rebuild_monthly_summaries(after)
 
 
 def _remote_contains_exact_task(text, report, source, confirmation):

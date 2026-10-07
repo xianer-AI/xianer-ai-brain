@@ -124,6 +124,9 @@ def summary_rows(text: str) -> dict[tuple[str, str], tuple[str, ...]]:
 def check_daily_summary(text: str) -> None:
     """Raise ``ValueError`` when any published daily row is stale or missing."""
 
+    from guard_production_ledger import check_monthly_summary
+
+    check_monthly_summary(text)
     details = detail_totals(text)
     published = summary_rows(text)
     detail_keys = set(details)
