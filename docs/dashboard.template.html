@@ -47,7 +47,7 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
 
 <section id="product-total-section" aria-labelledby="product-total-title">
-<h2 id="product-total-title">每日产品总产能</h2><p class="muted section-note">汇总同工序全部员工，下机和烤边独立统计，不受上方员工筛选影响。默认统计最近5天，先展示3天；折叠日期也计入期间累计。无记录、待核实不当作0。</p>
+<h2 id="product-total-title">每日产品总产能</h2><p class="muted section-note">汇总同工序全部员工，下机和烤边独立统计，不受上方员工筛选影响。默认统计截至北京时间昨天的最近5天，先展示3天；折叠日期也计入期间累计。无记录、待核实不当作0。</p>
 <div class="filter-bar"><div class="filter-field"><label for="product-total-range">日期范围</label><select id="product-total-range"><option value="1">最近1天</option><option value="3">最近3天</option><option value="5" selected>最近5天</option><option value="7">最近7天</option><option value="custom">自选日期范围</option></select></div><div class="filter-field total-mobile-filter"><label for="product-total-process">工序</label><select id="product-total-process"><option value="下机">下机产能</option><option value="烤边">烤边产能</option></select></div></div>
 <div class="filter-bar" id="product-total-custom" hidden><div class="filter-field"><label for="product-total-start">开始日期</label><input id="product-total-start" type="date"></div><div class="filter-field"><label for="product-total-end">结束日期</label><input id="product-total-end" type="date"></div><button id="product-total-query" type="button">查询</button></div>
 <p class="muted section-note" id="product-total-caption"></p><div id="product-total-result" aria-live="polite"></div>
@@ -632,16 +632,21 @@ function buildProductTotals(workers,records,statusMap,process,start,end){
   const cells=PRODUCTS.map((_,i)=>({value:days.every(d=>d.cells[i].value===null)?null:days.reduce((n,d)=>n+(d.cells[i].value??0),0),missing:days.some(d=>d.cells[i].missing)}));
   return {days,cells,value:cells.every(c=>c.value===null)?null:cells.reduce((n,c)=>n+(c.value??0),0),missing:days.some(d=>d.missing)};
 }
-let productTotalsYear=null;
+function productTotalsCutoff(year=activeYear,now=new Date()){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
+  const date=type=>parts.find(p=>p.type===type).value;
+  const day=new Date(`${date('year')}-${date('month')}-${date('day')}T00:00:00Z`);day.setUTCDate(day.getUTCDate()-1);
+  const yesterday=day.toISOString().slice(0,10),maximum=year+'-12-31';return yesterday>maximum?maximum:yesterday;
+}
+let productTotalsYear=null,productTotalsLastCutoff=null;
 function prepareProductTotals(workers,records,statusMap){
   const mode=document.querySelector('#product-total-range'),start=document.querySelector('#product-total-start'),end=document.querySelector('#product-total-end');
   const minimum=`${activeYear}-${String(PERIODS[activeYear].firstMonth).padStart(2,'0')}-01`,maximum=activeYear+'-12-31';
-  const dates=[...records.map(r=>r.date),...[...statusMap.keys()].map(k=>k.slice(0,10))].filter(d=>inSelectedPeriod(d)).sort();
-  const latest=dates.at(-1)||minimum;
+  const latest=productTotalsCutoff();
   if(productTotalsYear!==activeYear){mode.value=savedView('product-total-range','5');if(!mode.value)mode.value='5';start.value=savedView('product-total-start',minimum);end.value=savedView('product-total-end',latest);productTotalsYear=activeYear;}
   start.min=end.min=minimum;start.max=end.max=maximum;
   const update=()=>renderProductTotals(workers,records,statusMap,latest);
-  window.__productTotalsUpdate=()=>{const c=window.__dashboardContext;renderProductTotals(c.workers,c.records,c.statusMap,[...c.records.map(r=>r.date),...[...c.statusMap.keys()].map(k=>k.slice(0,10))].filter(d=>inSelectedPeriod(d)).sort().at(-1)||minimum);};
+  window.__productTotalsUpdate=()=>{const c=window.__dashboardContext;renderProductTotals(c.workers,c.records,c.statusMap,productTotalsCutoff());};
   if(!mode.dataset.bound){mode.dataset.bound='1';mode.addEventListener('change',()=>{saveView('product-total-range',mode.value);window.__productTotalsUpdate();});
     document.querySelector('#product-total-query').addEventListener('click',()=>{saveView('product-total-start',start.value);saveView('product-total-end',end.value);window.__productTotalsUpdate();});
     document.querySelector('#product-total-process').addEventListener('change',event=>{saveView('product-total-process',event.target.value);window.__productTotalsUpdate();});
@@ -651,11 +656,14 @@ function prepareProductTotals(workers,records,statusMap){
 function renderProductTotals(workers,records,statusMap,latest){
   const mode=document.querySelector('#product-total-range').value,custom=mode==='custom';
   document.querySelector('#product-total-custom').hidden=!custom;
+  productTotalsLastCutoff=latest;
   let end=custom?document.querySelector('#product-total-end').value:latest,start=custom?document.querySelector('#product-total-start').value:'';
+  const minimum=`${activeYear}-${String(PERIODS[activeYear].firstMonth).padStart(2,'0')}-01`;
+  if(!custom&&end<minimum){document.querySelector('#product-total-caption').textContent='最近天数以北京时间昨天为截止日';document.querySelector('#product-total-result').innerHTML='<p class="muted">该统计年度尚无已结束的生产日期，可通过自选日期查询。</p>';return;}
   if(!custom){const d=new Date(end+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-Number(mode)+1);start=d.toISOString().slice(0,10);start=start<`${activeYear}-${String(PERIODS[activeYear].firstMonth).padStart(2,'0')}-01`?`${activeYear}-${String(PERIODS[activeYear].firstMonth).padStart(2,'0')}-01`:start;}
   const period=comparisonPeriod('range','', '',start,end,activeYear),target=document.querySelector('#product-total-result');
   if(!period.valid){target.innerHTML=`<p class="state-pending" role="alert">${esc(period.error)}</p>`;return;}
-  document.querySelector('#product-total-caption').textContent=`${start} 至 ${end}（含首尾） · 最近天数以台账最新日期为止，按连续日历日统计 · 单位：双`;
+  document.querySelector('#product-total-caption').textContent=`${start} 至 ${end}（含首尾） · ${custom?'自选日期范围':'以北京时间昨天为截止日，按连续日历日统计'} · 单位：双`;
   const amount=c=>`${c.value===null?'—':numberText(c.value)}${c.missing?'<small class="state-pending">待补报／待核实</small>':''}`;
   const blocks=['下机','烤边'].map(process=>{const result=buildProductTotals(workers,records,statusMap,process,start,end),visible=result.days.slice(0,3),rest=result.days.slice(3);
     const row=d=>`<tr><th scope="row">${d.date}</th>${d.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(d)}</td></tr>`;
@@ -735,5 +743,5 @@ checkPublishedSnapshot();
 if(performance.getEntriesByType('navigation')[0]?.type==='reload'||new URL(location.href).searchParams.has('_sync'))requestAnimationFrame(()=>window.scrollTo(0,Number(savedView('scroll','0'))));
 window.addEventListener('pagehide',()=>saveView('scroll',String(window.scrollY)));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkPublishedSnapshot();});
-let seconds=30;setInterval(()=>{seconds--;const el=document.querySelector('#next-refresh');if(el)el.textContent=`下次核查：${seconds} 秒`;if(seconds<=0){seconds=30;checkPublishedSnapshot();}},1000);
+let seconds=30;setInterval(()=>{seconds--;const el=document.querySelector('#next-refresh');if(el)el.textContent=`下次核查：${seconds} 秒`;if(seconds<=0){seconds=30;if(window.__productTotalsUpdate&&productTotalsLastCutoff!==productTotalsCutoff())window.__productTotalsUpdate();checkPublishedSnapshot();}},1000);
 </script>
