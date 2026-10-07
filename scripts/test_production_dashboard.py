@@ -144,6 +144,28 @@ const requestAnimationFrame=callback=>callback();
         prelude += 'window.__LEDGERS__=' + json.dumps(fixture, ensure_ascii=False) + ';\n'
         self.run_node(prelude + script + '\n' + assertions)
 
+    def test_product_totals_keep_processes_missing_days_and_calendar_range(self):
+        self.annual_browser(r"""
+const workers=[{person:'A',process:'下机'},{person:'B',process:'下机'},{person:'C',process:'烤边'}];
+const records=[{date:'2026-09-30',person:'A',process:'下机',values:['100','0','待核实','0','0','0']},
+{date:'2026-09-30',person:'B',process:'下机',values:['200','10','0','0','0','0']},
+{date:'2026-09-30',person:'C',process:'烤边',values:['900','0','0','0','0','0']},
+{date:'2026-10-01',person:'A',process:'下机',values:['50','0','0','0','0','0']}];
+const states=new Map([['2026-10-01|B','未上班']]);
+const result=buildProductTotals(workers,records,states,'下机','2026-09-30','2026-10-02');
+assert.equal(result.days.length,3);
+assert.equal(result.days[0].value,null);
+assert.equal(result.days[0].missing,true);
+assert.equal(result.days[1].value,50);
+assert.equal(result.days[1].missing,false);
+assert.equal(result.days[2].cells[0].value,300);
+assert.equal(result.days[2].cells[2].missing,1);
+assert.equal(result.value,360);
+assert.equal(result.missing,true);
+assert.equal(buildProductTotals(workers,records,states,'烤边','2026-09-30','2026-09-30').value,900);
+assert.deepEqual(productTotalDays('2026-09-29','2026-10-05'),['2026-10-05','2026-10-04','2026-10-03','2026-10-02','2026-10-01','2026-09-30','2026-09-29']);
+""")
+
     def comparison_browser(self, assertions, local_storage=None):
         self.annual_browser('''
 const [workerA,workerB,workerC,workerD]=DEFAULT_WORKERS;
