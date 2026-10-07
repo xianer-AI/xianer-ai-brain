@@ -95,11 +95,23 @@ function syncRowsFromLedger(){
   }
   return rows;
 }
+// Only explicit source evidence may identify recovery or historical incidents.
+function syncDisplayState(status){
+  const text=String(status||'');
+  if(/历史异常|历史故障|已归档/.test(text))return 'history';
+  if(/已恢复|恢复正常|故障已解决/.test(text))return 'recovered';
+  if(/失败|异常|卡住|阻塞|重试|reply_pending/.test(text))return 'fault';
+  if(/处理中|等待|待核实|待同步|待处理/.test(text))return 'pending';
+  return text?'normal':'unknown';
+}
+function productTotalCompleteness(total){
+  return total.missing?'已报合计，数据未齐':total.value===null?'暂无已报数量':'已报数据完整';
+}
 function snapshotSyncState(release,rows,checkSection){
   if(!release.workbench_version||!release.rules_release_id||!release.source_digest)return {kind:'warn',label:'网页版本信息缺失'};
   if(release.release_status!=='正式')return {kind:'warn',label:'网页尚未使用正式版本'};
   if(['GitHub','OpenClaw','飞书'].some(source=>!rows.some(row=>row.source===source)))return {kind:'warn',label:'同步证据不完整'};
-  if(rows.some(row=>/失败|异常|卡住|阻塞|重试|reply_pending/.test(row.status)))return {kind:'error',label:'同步存在异常'};
+  if(rows.some(row=>syncDisplayState(row.status)==='fault'))return {kind:'error',label:'同步存在异常'};
   const consistent=(checkSection.match(/\|\s*三端规则版本\s*\|\s*([^|]+)/)||[])[1]?.trim();
   if(consistent!=='一致'||rows.some(row=>row.version.split('/')[0].trim()!==release.workbench_version))return {kind:'error',label:'规则版本未对齐'};
   if(rows.some(row=>/处理中|待同步|待处理/.test(row.status)))return {kind:'warn',label:'同步处理中'};
@@ -142,7 +154,9 @@ function renderAlerts(stamp,syncRows){
   const conflicts=Number((checkSection.match(/\|\s*状态冲突\s*\|\s*(\d+)/)||[])[1]||0);
   const versions=(checkSection.match(/\|\s*三端规则版本\s*\|\s*([^|]+)/)||[])[1]?.trim();
   for(const row of syncRows){
-    if(/失败|异常|卡住|阻塞/.test(row.status))alerts.push({kind:'error',text:`异常告警：${row.source}：${row.status}。`});
+    if(syncDisplayState(row.status)==='history')alerts.push({kind:'info',text:`历史异常：${row.source} · ${row.status} · 记录时间：${row.time||'未记录'}。`});
+    else if(syncDisplayState(row.status)==='recovered')alerts.push({kind:'ok',text:`已恢复：${row.source} · ${row.status} · 状态时间：${row.time||'未记录'}。`});
+    else if(syncDisplayState(row.status)==='fault')alerts.push({kind:'error',text:`当前故障：${row.source} · ${row.status} · 状态时间：${row.time||'未记录'}。`});
     else if(row.source==='飞书'&&/等待核实/.test(row.status))alerts.push({kind:'info',text:`等待员工核实：飞书${row.status}；此项为业务待处理。`});
     else if(/处理中|等待|待核实|待同步/.test(row.status))alerts.push({kind:'warn',text:`状态提示：${row.source}：${row.status}。`});
   }
@@ -169,13 +183,13 @@ function renderAlerts(stamp,syncRows){
 }
 function renderTaskHealth(syncRows){
   const el=document.querySelector('#task-health');
-  const failed=syncRows.filter(row=>/失败|异常|卡住|阻塞|重试|reply_pending|待处理/.test(row.status));
+  const failed=syncRows.filter(row=>syncDisplayState(row.status)==='fault');
   if(failed.length){
     el.className='task-health error';
-    el.innerHTML=`⚠ 上传/回执异常任务：${failed.length} 条 · ${failed.map(row=>`${esc(row.source)}：${esc(row.status)}`).join('；')}`;
+    el.innerHTML=`⚠ 当前同步故障：${failed.length} 条 · ${failed.map(row=>`${esc(row.source)}：${esc(row.status)}`).join('；')}`;
   }else{
     el.className='task-health ok';
-    el.textContent='✓ 当前没有上传失败、回执失败或卡住任务';
+    el.textContent=syncRows.length<3?'同步证据不完整，暂不能判断任务状态':'✓ 当前同步快照未报告故障；业务待确认单独显示';
   }
 }
 const PRODUCTS=['棉堆堆袜','冰冰袜','小腿袜','过膝袜','女船袜','男船袜'];
@@ -668,11 +682,11 @@ function renderProductTotals(workers,records,statusMap,latest){
   document.querySelector('#product-total-caption').textContent=`${start} 至 ${end}（含首尾） · ${custom?'自选日期范围':'以北京时间昨天为截止日，按连续日历日统计'} · 单位：双`;
   const amount=c=>`${c.value===null?'—':numberText(c.value)}${c.missing?'<small class="state-pending">待补报／待核实</small>':''}`;
   const blocks=['下机','烤边'].map(process=>{const result=buildProductTotals(workers,records,statusMap,process,start,end),direct=window.matchMedia('(min-width:701px)').matches&&['5','7'].includes(mode),visible=direct?result.days:result.days.slice(0,3),rest=direct?[]:result.days.slice(3);
-    const row=d=>`<tr><th scope="row">${d.date}</th>${d.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(d)}</td></tr>`;
+    const row=d=>`<tr><th scope="row">${d.date}</th>${d.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(d)}<small class="muted">${productTotalCompleteness(d)}</small></td></tr>`;
     const header=`<thead><tr><th>日期</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认合计</th></tr></thead>`;
-    const grid=d=>`<article class="product-card"><header class="product-card-header"><strong>${d.date}</strong><span class="process-tag">${process}</span></header><dl class="product-grid">${PRODUCTS.map((p,i)=>`<div class="product-cell"><dt>${p}</dt><dd>${amount(d.cells[i])}</dd></div>`).join('')}</dl><div class="product-card-total"><span>已确认合计</span><strong>${amount(d)}<small>双</small></strong></div></article>`;
+    const grid=d=>`<article class="product-card"><header class="product-card-header"><strong>${d.date}</strong><span class="process-tag">${process}</span></header><dl class="product-grid">${PRODUCTS.map((p,i)=>`<div class="product-cell"><dt>${p}</dt><dd>${amount(d.cells[i])}</dd></div>`).join('')}</dl><div class="product-card-total"><span>${d.missing?'已报合计':'已确认合计'}</span><strong>${amount(d)}<small>双</small></strong></div><p class="muted">${productTotalCompleteness(d)}</p></article>`;
     const foldKey='product-total-fold-'+process+'-'+mode+'-'+start+'-'+end,open=savedView(foldKey,'closed')==='open';
-    return `<section class="product-total-block" data-total-process="${process}"><h3>每日${process}产能</h3><div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody>${visible.map(row).join('')}</tbody></table></div><div class="mobile-view">${visible.map(grid).join('')}</div>${rest.length?`<details class="product-total-fold" data-total-fold="${esc(foldKey)}"${open?' open':''}><summary>展开／收起另外${rest.length}天</summary><div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody>${rest.map(row).join('')}</tbody></table></div><div class="mobile-view">${rest.map(grid).join('')}</div></details>`:''}<div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody><tr class="summary-total"><th>期间累计 · ${result.days.length}天</th>${result.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(result)}</td></tr></tbody></table></div><div class="mobile-view">${grid({...result,date:`期间累计 · ${result.days.length}天`})}</div></section>`;
+    return `<section class="product-total-block" data-total-process="${process}"><h3>每日${process}产能</h3><p class="section-note ${result.missing?'state-pending':'muted'}">${productTotalCompleteness(result)} · ${result.missing?'期间累计仅汇总已有数量，待核实部分未当作0。':'按现有台账判断；张小翠无记录不视为缺报。'}</p><div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody>${visible.map(row).join('')}</tbody></table></div><div class="mobile-view">${visible.map(grid).join('')}</div>${rest.length?`<details class="product-total-fold" data-total-fold="${esc(foldKey)}"${open?' open':''}><summary>展开／收起另外${rest.length}天</summary><div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody>${rest.map(row).join('')}</tbody></table></div><div class="mobile-view">${rest.map(grid).join('')}</div></details>`:''}<div class="desktop-view history-wrap"><table class="product-total-table">${header}<tbody><tr class="summary-total"><th>期间累计 · ${result.days.length}天</th>${result.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(result)}<small class="muted">${productTotalCompleteness(result)}</small></td></tr></tbody></table></div><div class="mobile-view">${grid({...result,date:`期间累计 · ${result.days.length}天`})}</div></section>`;
   });target.innerHTML=blocks.join('');
   const selected=document.querySelector('#product-total-process').value;
   target.querySelectorAll('[data-total-process]').forEach(el=>el.classList.toggle('total-mobile-inactive',el.dataset.totalProcess!==selected));
@@ -716,7 +730,7 @@ function refresh(){
     const defaults=[['GitHub',dashboardRelease.workbench_version],['OpenClaw',`${dashboardRelease.workbench_version} / ${dashboardRelease.sync_protocol_version}`],['飞书',`${dashboardRelease.workbench_version} / ${dashboardRelease.card_protocol_version}`]];
     document.querySelector('#sync').innerHTML=defaults.map(([source,version])=>{
       const row=syncRows.find(item=>item.source===source)||{source,version,status:'未记录',time:stamp};
-      const bad=/失败|异常|卡住|阻塞/.test(row.status), businessPending=!bad&&row.source==='飞书'&&/等待核实/.test(row.status), pending=/处理中|等待|待核实|待同步/.test(row.status);
+      const bad=syncDisplayState(row.status)==='fault', businessPending=!bad&&row.source==='飞书'&&/等待核实/.test(row.status), pending=/处理中|等待|待核实|待同步/.test(row.status);
       const cls=bad?'bad':pending?'waiting':'ok';
       const icon=bad?'⚠':pending?'⏳':'✓';
       const count=(row.status.match(/[（(]\s*(\d+)\s*条\s*[）)]/)||[])[1];

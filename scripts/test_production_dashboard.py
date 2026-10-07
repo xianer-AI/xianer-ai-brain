@@ -144,6 +144,18 @@ const requestAnimationFrame=callback=>callback();
         prelude += 'window.__LEDGERS__=' + json.dumps(fixture, ensure_ascii=False) + ';\n'
         self.run_node(prelude + script + '\n' + assertions)
 
+    def test_display_classification_and_partial_total(self):
+        self.annual_browser(r"""
+assert.equal(syncDisplayState('上传失败'),'fault');
+assert.equal(syncDisplayState('上传失败，已恢复'),'recovered');
+assert.equal(syncDisplayState('历史异常：上传失败，已归档'),'history');
+assert.equal(syncDisplayState('等待员工核实'),'pending');
+assert.equal(syncDisplayState(''),'unknown');
+assert.equal(productTotalCompleteness({value:100,missing:true}),'已报合计，数据未齐');
+assert.equal(productTotalCompleteness({value:0,missing:false}),'已报数据完整');
+assert.equal(productTotalCompleteness({value:null,missing:false}),'暂无已报数量');
+""")
+
     def test_irregular_finishing_worker_does_not_create_missing_alerts(self):
         self.annual_browser(r"""
 const workers=[{code:'C',person:'C',process:'烤边'},{code:'D',person:'D',process:'烤边'}];
@@ -741,8 +753,8 @@ assert.doesNotMatch(previousYear,/2027-/);
 
     def test_sync_banner_requires_evidence_and_matching_versions(self):
         template = build.TEMPLATE.read_text()
-        pure = template.split('function snapshotSyncState', 1)[1].split('function renderSyncBanner', 1)[0]
-        code = 'const assert=require("node:assert/strict");function snapshotSyncState' + pure
+        pure = template.split('function syncDisplayState', 1)[1].split('function renderSyncBanner', 1)[0]
+        code = 'const assert=require("node:assert/strict");function syncDisplayState' + pure
         code += '''
 const release={workbench_version:'V1.18',rules_release_id:'2026-10-06-v1.18',source_digest:'a'.repeat(64),release_status:'正式'};
 const rows=['GitHub','OpenClaw','飞书'].map(source=>({source,version:'V1.18 / S1',status:'已同步'}));
