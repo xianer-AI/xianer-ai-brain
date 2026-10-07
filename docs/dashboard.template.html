@@ -73,6 +73,13 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <p class="muted refresh-footer">手机和电脑读取同一份已发布台账，每30秒核查网站版本；发现新快照后自动更新。网络异常时保留当前数据并提示。<span id="next-refresh">下次核查：30 秒</span></p>
 </main>
 <script>
+// Keep the two historical Cloudflare root entries on the current production site.
+if(location.hostname==='xianer-ai-brain.pages.dev'&&['/','/index.html'].includes(location.pathname)){
+  const destination=new URL('https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html');
+  destination.search=location.search;
+  destination.hash=location.hash;
+  location.replace(destination.href);
+}
 const dashboardRelease=window.__DASHBOARD_RELEASE__||{};
 const annualLedgers=window.__LEDGERS__||{'2026':window.__LEDGER__||''};
 const PERIODS={'2026':{firstMonth:7,label:'2026 年下半年',title:'2026年下半年累计产能',scope:'下半年'},'2027':{firstMonth:1,label:'2027 年全年',title:'2027年全年累计产能',scope:'全年'}};

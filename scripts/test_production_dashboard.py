@@ -287,6 +287,36 @@ for(const year of ['2026','2027']){
                               'assert.equal(target.pathname,"/production-dashboard/index.html");' +
                               'assert.equal(target.search,incoming.search);assert.equal(target.hash,incoming.hash);assert.equal(link.href,target.href);')
 
+    def test_cloudflare_root_redirect_is_host_and_path_specific_without_loop(self):
+        template = build.TEMPLATE.read_text()
+        self.assertEqual(template.count('<script>'), 1)
+        redirect = template.split('<script>', 1)[1].split('const dashboardRelease=', 1)[0]
+        self.run_node('const assert=require("node:assert/strict");' +
+                      'const redirect=address=>{const location=new URL(address);location.replace=value=>location.replacement=value;' +
+                      redirect + 'return location;};' + r'''
+const canonical='https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html';
+for(const year of ['2026','2027']){
+  for(const path of ['/','/index.html']){
+    const incoming=redirect('https://xianer-ai-brain.pages.dev'+path+'?year='+year+'&_sync=123#product-total-title');
+    const target=new URL(incoming.replacement);
+    assert.equal(target.origin+target.pathname,canonical);
+    assert.equal(target.search,incoming.search);
+    assert.equal(target.hash,incoming.hash);
+    assert.equal(redirect(target.href).replacement,undefined);
+  }
+}
+for(const address of [
+  canonical+'?year=2027#product-total-title',
+  'https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/index.html',
+  'http://localhost:8795/index.html?year=2027#product-total-title',
+  'http://127.0.0.1:8795/',
+  'https://other.pages.dev/',
+  'https://xianer-ai-brain.pages.dev.example.com/',
+  'https://xianer-ai-brain.pages.dev/production-dashboard',
+  'https://xianer-ai-brain.pages.dev/other-tool/index.html',
+])assert.equal(redirect(address).replacement,undefined,address);
+''')
+
     def test_display_classification_and_partial_total(self):
         self.annual_browser(r"""
 assert.equal(syncDisplayState('上传失败'),'fault');

@@ -5,7 +5,7 @@
   ],
   "builder_sha256": "4130ec9e2e3e70857433c949fa9273fcf1a5ef0ec8a749e3c41ef04581e328bc",
   "card_protocol_version": "CARD-INTERACTIVE-1",
-  "generated_at": "2026-10-07T15:41:11+00:00",
+  "generated_at": "2026-10-07T15:48:07+00:00",
   "ledger_sha256": "cc01bad6e765eb50921632e37912949d10b33cc026e7c96ee8829ebc91b15fac",
   "ledgers_sha256": {
     "2026": "cc01bad6e765eb50921632e37912949d10b33cc026e7c96ee8829ebc91b15fac",
@@ -14,9 +14,9 @@
   "release_status": "正式",
   "rules_release_id": "2026-10-07-v1.21",
   "schema": 1,
-  "source_digest": "57094e8d129a27dfe9effbada176a01e46fc8ee9dc90b5faa0e5bbe3e9f7ea1f",
+  "source_digest": "2c914d3d0b59ac088d05cb7b19094c9e28dd2ef2e4b22e1b9edff43a0b8959f7",
   "sync_protocol_version": "S1",
-  "template_sha256": "578d678f6e5acf79dd7cc0299172635eacc403732be1c85f274862e9295b87d1",
+  "template_sha256": "fcd3d511c10f7fbacbca6a0461b0e7f7f2c354fe6740b02c2722fb30d115d3f0",
   "version_sha256": "b43bb58caa2403c9926e6023806a15ca3f3e74e515920bbe4097b49acd3ece70",
   "workbench_version": "V1.21"
 }
