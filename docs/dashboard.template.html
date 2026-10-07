@@ -47,7 +47,7 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
 
 <section id="product-total-section" aria-labelledby="product-total-title">
-<h2 id="product-total-title">每日产品总产能</h2><p class="muted section-note">汇总同工序全部员工，下机和烤边独立统计，不受上方员工筛选影响。默认统计截至北京时间昨天的最近5天，先展示3天；折叠日期也计入期间累计。无记录、待核实不当作0。</p>
+<h2 id="product-total-title">每日产品总产能</h2><p class="muted section-note">汇总同工序全部员工，下机和烤边独立统计，不受上方员工筛选影响。默认统计截至北京时间昨天的最近5天，先展示3天；折叠日期也计入期间累计。无记录、待核实不当作0；张小翠按实际烤边记录计入，无记录不视为缺报。</p>
 <div class="filter-bar"><div class="filter-field"><label for="product-total-range">日期范围</label><select id="product-total-range"><option value="1">最近1天</option><option value="3">最近3天</option><option value="5" selected>最近5天</option><option value="7">最近7天</option><option value="custom">自选日期范围</option></select></div><div class="filter-field total-mobile-filter"><label for="product-total-process">工序</label><select id="product-total-process"><option value="下机">下机产能</option><option value="烤边">烤边产能</option></select></div></div>
 <div class="filter-bar" id="product-total-custom" hidden><div class="filter-field"><label for="product-total-start">开始日期</label><input id="product-total-start" type="date"></div><div class="filter-field"><label for="product-total-end">结束日期</label><input id="product-total-end" type="date"></div><button id="product-total-query" type="button">查询</button></div>
 <p class="muted section-note" id="product-total-caption"></p><div id="product-total-result" aria-live="polite"></div>
@@ -625,6 +625,8 @@ function buildProductTotals(workers,records,statusMap,process,start,end){
       for(const worker of people){const rec=byKey.get(`${date}|${worker.person}`),amount=rec?numeric(rec.values[index]):null;
         if(amount!==null&&Number.isFinite(amount))value=(value??0)+amount;
         else if(/未上班/.test(String(rec?.values[index]||''))||(!rec&&/未上班/.test(statusMap.get(`${date}|${worker.person}`)||'')))absent++;
+        // 张小翠为不定期烤边；没有记录不代表缺报，明确待核实仍提示。
+        else if(process==='烤边'&&worker.code==='D'&&!/待查|核实|待处理/.test(String(rec?.values[index]||'')+' '+String(statusMap.get(`${date}|${worker.person}`)||''))&&(!rec||/^(?:|—|-|无记录)$/.test(String(rec.values[index]??'').trim())))continue;
         else missing++;
       }return {value,missing,absent};});
     return {date,cells,value:cells.every(c=>c.value===null)?null:cells.reduce((n,c)=>n+(c.value??0),0),missing:cells.some(c=>c.missing)};

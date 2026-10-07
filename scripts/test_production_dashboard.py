@@ -144,6 +144,20 @@ const requestAnimationFrame=callback=>callback();
         prelude += 'window.__LEDGERS__=' + json.dumps(fixture, ensure_ascii=False) + ';\n'
         self.run_node(prelude + script + '\n' + assertions)
 
+    def test_irregular_finishing_worker_does_not_create_missing_alerts(self):
+        self.annual_browser(r"""
+const workers=[{code:'C',person:'C',process:'烤边'},{code:'D',person:'D',process:'烤边'}];
+const rec={date:'2026-10-06',person:'C',process:'烤边',values:['100','0','0','0','0','0']};
+let result=buildProductTotals(workers,[rec],new Map(),'烤边','2026-10-06','2026-10-06');
+assert.equal(result.value,100);assert.equal(result.missing,false);
+result=buildProductTotals(workers,[rec,{date:rec.date,person:'D',process:'烤边',values:['20','0','0','0','0','0']}],new Map(),'烤边',rec.date,rec.date);
+assert.equal(result.value,120);assert.equal(result.missing,false);
+result=buildProductTotals(workers,[rec],new Map([[rec.date+'|D','待核实']]),'烤边',rec.date,rec.date);
+assert.equal(result.missing,true);
+result=buildProductTotals(workers,[],new Map(),'烤边',rec.date,rec.date);
+assert.equal(result.value,null);assert.equal(result.missing,true);
+""")
+
     def test_product_totals_cutoff_is_beijing_yesterday(self):
         self.annual_browser(r"""
 assert.equal(productTotalsCutoff('2026',new Date('2026-10-07T10:00:00Z')),'2026-10-06');
