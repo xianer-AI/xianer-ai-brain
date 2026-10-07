@@ -13,5 +13,7 @@
   "display_process_labels": {
     "下机": "下机翻袜产量",
     "烤边": "烤边产量"
-  }
+  },
+  "github_commit": "af026868df799972c4fb0fe965c034a162accf70",
+  "implementation_commit": "af026868df799972c4fb0fe965c034a162accf70"
 }
