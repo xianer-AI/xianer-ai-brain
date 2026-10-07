@@ -47,7 +47,7 @@ table{border-collapse:collapse;width:100%;margin:0}th,td{text-align:left;padding
 <div class="filter-bar"><div class="filter-field"><label for="daily-range">日期范围</label><select id="daily-range"><option value="3">最近3天</option><option value="5">最近5天</option><option value="all">全部日期</option></select></div><div class="filter-field"><label for="daily-worker">查看员工</label><select id="daily-worker"><option value="all">全部员工</option></select></div><span class="muted">从最新日期开始 · 所有产品数量单位为双</span></div><div id="daily"></div>
 
 <section id="product-total-section" aria-labelledby="product-total-title">
-<h2 id="product-total-title">每日产品总产能</h2><p class="muted section-note">汇总同工序全部员工，下机和烤边独立统计，不受上方员工筛选影响。默认统计截至北京时间昨天的最近5天，先展示3天；折叠日期也计入期间累计。无记录、待核实不当作0；张小翠按实际烤边记录计入，无记录不视为缺报。</p>
+<h2 id="product-total-title">每日产品总产能</h2><p class="muted section-note">汇总同工序全部员工，下机和烤边独立统计，不受上方员工筛选影响。默认统计截至北京时间昨天的最近5天；电脑端5天、7天全部展示，手机端先展示3天，其余可展开。折叠日期也计入期间累计。无记录、待核实不当作0；张小翠按实际烤边记录计入，无记录不视为缺报。</p>
 <div class="filter-bar"><div class="filter-field"><label for="product-total-range">日期范围</label><select id="product-total-range"><option value="1">最近1天</option><option value="3">最近3天</option><option value="5" selected>最近5天</option><option value="7">最近7天</option><option value="custom">自选日期范围</option></select></div><div class="filter-field total-mobile-filter"><label for="product-total-process">工序</label><select id="product-total-process"><option value="下机">下机产能</option><option value="烤边">烤边产能</option></select></div></div>
 <div class="filter-bar" id="product-total-custom" hidden><div class="filter-field"><label for="product-total-start">开始日期</label><input id="product-total-start" type="date"></div><div class="filter-field"><label for="product-total-end">结束日期</label><input id="product-total-end" type="date"></div><button id="product-total-query" type="button">查询</button></div>
 <p class="muted section-note" id="product-total-caption"></p><div id="product-total-result" aria-live="polite"></div>
@@ -667,7 +667,7 @@ function renderProductTotals(workers,records,statusMap,latest){
   if(!period.valid){target.innerHTML=`<p class="state-pending" role="alert">${esc(period.error)}</p>`;return;}
   document.querySelector('#product-total-caption').textContent=`${start} 至 ${end}（含首尾） · ${custom?'自选日期范围':'以北京时间昨天为截止日，按连续日历日统计'} · 单位：双`;
   const amount=c=>`${c.value===null?'—':numberText(c.value)}${c.missing?'<small class="state-pending">待补报／待核实</small>':''}`;
-  const blocks=['下机','烤边'].map(process=>{const result=buildProductTotals(workers,records,statusMap,process,start,end),visible=result.days.slice(0,3),rest=result.days.slice(3);
+  const blocks=['下机','烤边'].map(process=>{const result=buildProductTotals(workers,records,statusMap,process,start,end),direct=window.matchMedia('(min-width:701px)').matches&&['5','7'].includes(mode),visible=direct?result.days:result.days.slice(0,3),rest=direct?[]:result.days.slice(3);
     const row=d=>`<tr><th scope="row">${d.date}</th>${d.cells.map(c=>`<td>${amount(c)}</td>`).join('')}<td>${amount(d)}</td></tr>`;
     const header=`<thead><tr><th>日期</th>${PRODUCTS.map(p=>`<th>${p}</th>`).join('')}<th>已确认合计</th></tr></thead>`;
     const grid=d=>`<article class="product-card"><header class="product-card-header"><strong>${d.date}</strong><span class="process-tag">${process}</span></header><dl class="product-grid">${PRODUCTS.map((p,i)=>`<div class="product-cell"><dt>${p}</dt><dd>${amount(d.cells[i])}</dd></div>`).join('')}</dl><div class="product-card-total"><span>已确认合计</span><strong>${amount(d)}<small>双</small></strong></div></article>`;
@@ -741,6 +741,8 @@ function refresh(){
 }
 refresh();
 window.addEventListener('resize',syncProductionComparisonViewport);
+let productTotalsDesktop=window.matchMedia('(min-width:701px)').matches;
+window.addEventListener('resize',()=>{const desktop=window.matchMedia('(min-width:701px)').matches;if(desktop!==productTotalsDesktop){productTotalsDesktop=desktop;if(window.__productTotalsUpdate)window.__productTotalsUpdate();}});
 checkPublishedSnapshot();
 if(performance.getEntriesByType('navigation')[0]?.type==='reload'||new URL(location.href).searchParams.has('_sync'))requestAnimationFrame(()=>window.scrollTo(0,Number(savedView('scroll','0'))));
 window.addEventListener('pagehide',()=>saveView('scroll',String(window.scrollY)));
