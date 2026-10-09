@@ -29,7 +29,7 @@ export function summarizeUploadFailure(code, signal, output = {}) {
     || combined.split(/\r?\n/).map(line => line.trim()).filter(Boolean).at(-1)
     || '未返回具体错误';
   const exit = code == null ? `signal=${signal || 'unknown'}` : `code=${code}${signal ? ` signal=${signal}` : ''}`;
-  return `上传任务失败（${exit}）：${detail}`.slice(0, 240);
+  return `上传任务失败（${exit}）：${detail}\n${combined}`;
 }
 
 export function once(callback) {

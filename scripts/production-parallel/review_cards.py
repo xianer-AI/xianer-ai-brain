@@ -75,6 +75,9 @@ def init(db):
     text TEXT NOT NULL, source TEXT, token TEXT, status TEXT NOT NULL,
     error TEXT, error_detail TEXT, attempts INTEGER NOT NULL DEFAULT 0,
     next_at REAL NOT NULL, created REAL NOT NULL)''')
+  c.execute('''CREATE TABLE IF NOT EXISTS upload_attempt_history(
+    id INTEGER PRIMARY KEY, message_id TEXT NOT NULL, attempt INTEGER NOT NULL,
+    event TEXT NOT NULL, detail TEXT, created REAL NOT NULL)''')
   try: c.execute('ALTER TABLE confirmation_receipts ADD COLUMN error_detail TEXT')
   except Exception: pass
   try: c.execute('ALTER TABLE confirmation_receipts ADD COLUMN worker_pid INTEGER')
@@ -246,7 +249,10 @@ def claim_confirmation_dispatch(db,message_id):
       (status IN ('pending','pending_dispatch') OR
        (status='dispatching' AND next_at<=?))""",
     (now+60,message_id,now)).rowcount
-  return bool(updated)
+  if updated:
+   c.execute('INSERT INTO upload_attempt_history(message_id,attempt,event,created) SELECT message_id,attempts,?,? FROM confirmation_receipts WHERE message_id=?',
+             ('started',now,message_id))
+ return bool(updated)
 
 def mark_confirmation_dispatch_started(db,message_id,pid):
  init(db); now=time.time()
@@ -262,6 +268,9 @@ def mark_confirmation_dispatch_failed(db,message_id,error):
  with q.conn(db) as c:
   row=c.execute("SELECT source,status,attempts FROM confirmation_receipts WHERE message_id=?",
                 (message_id,)).fetchone()
+  if row and row['status']=='dispatching':
+   c.execute('INSERT INTO upload_attempt_history(message_id,attempt,event,detail,created) VALUES(?,?,?,?,?)',
+             (message_id,int(row['attempts'] or 0),'failed',str(error),now))
   # A deterministic worker can commit and verify GitHub successfully, then
   # fail only while sending the Feishu receipt. Keep that upload authoritative
   # and queue only the receipt for retry; never spend upload attempts or block
@@ -278,6 +287,8 @@ def mark_confirmation_dispatch_failed(db,message_id,error):
   # only a verified receipt can finish the batch.
   attempts = int(row['attempts'] or 0) if row else 0
   delay = _dispatch_retry_delay(attempts) if attempts else DISPATCH_RETRY_BASE_SECONDS
+  if attempts <= 3 and ('GitHub读取失败' in str(error) or '远程已更新：' in str(error)):
+   delay = 5 * max(1, attempts)
   c.execute("""UPDATE confirmation_receipts
     SET status='pending_dispatch', error=?, error_detail=?, next_at=?, worker_pid=NULL
     WHERE message_id=? AND status='dispatching'""",
@@ -404,6 +415,8 @@ def mark_confirmation_dispatched(db,message_id,reply_message_id=None):
   if not row or not row['source']:
    raise ValueError('确认回执没有绑定原始报数')
   verify_dispatch_receipt(db,row['source'],message_id)
+  c.execute('INSERT INTO upload_attempt_history(message_id,attempt,event,detail,created) SELECT message_id,attempts,?,?,? FROM confirmation_receipts WHERE message_id=? AND status!=?',
+            ('succeeded',reply_message_id,now,message_id,'dispatched'))
   c.execute("""UPDATE confirmation_receipts
     SET status='dispatched',error=NULL,error_detail=NULL,worker_pid=NULL,
         reply_message_id=COALESCE(?,reply_message_id),dispatched_at=?,

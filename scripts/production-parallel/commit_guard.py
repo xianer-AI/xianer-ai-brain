@@ -50,6 +50,7 @@ def _transient_gh_error(detail):
  return any(token in text for token in (
   'eof','socket','timed out','timeout','connection reset','connection refused',
   'network','502','503','504','temporary failure',
+  'ssl','tls','http2','http/2','connection closed','unexpected end',
  ))
 
 def gh_read(args, *, timeout=GH_READ_TIMEOUT):
@@ -70,7 +71,7 @@ def gh_read(args, *, timeout=GH_READ_TIMEOUT):
   except subprocess.CalledProcessError as exc:
    detail=exc.output or str(exc)
    if not _transient_gh_error(detail) or attempt == len(GH_READ_DELAYS):
-    raise
+    raise RuntimeError(f'GitHub读取失败：{str(detail).strip()}') from exc
    last=exc
   if attempt < len(GH_READ_DELAYS):
    time.sleep(GH_READ_DELAYS[attempt])
@@ -228,7 +229,7 @@ def run_original_ledger_guard(before, after):
     '--jq','.content'])
    guard_path.write_bytes(base64.b64decode(raw))
   r=subprocess.run([sys.executable,str(guard_path),str(before_path),str(after_path)],
-                   text=True,capture_output=True)
+                   text=True,capture_output=True,timeout=20)
   if r.returncode:
    detail=(r.stderr.strip() or r.stdout.strip() or '未知校验错误')
    raise ValueError('原有 guard_production_ledger.py 拦截候选：'+detail)
@@ -309,7 +310,11 @@ def write_remote(a,content,source,confirmation,commit_message,receipt_name,requi
    raise ValueError('提交前远程已更新：必须重新读取、合并、校验，禁止覆盖旧候选')
   payload={'message':commit_message,'sha':expected_sha,'branch':'main','content':base64.b64encode(content.encode()).decode()}
   r=subprocess.run(['/opt/homebrew/bin/gh','api','--method','PUT',endpoint,'--input','-'],input=json.dumps(payload),text=True,capture_output=True)
-  if r.returncode:raise RuntimeError('上传失败，保持待上传状态')
+  if r.returncode:
+   detail=(r.stderr or r.stdout or '未返回错误详情').strip()
+   if 'HTTP 409' in detail:
+    raise ValueError('远程已更新：'+detail)
+   raise RuntimeError('上传失败，保持待上传状态：'+detail)
   result=json.loads(r.stdout)
   commit=result.get('commit',{}).get('sha')
   if not commit: raise RuntimeError('远程提交未返回 commit，状态不明，禁止重试')

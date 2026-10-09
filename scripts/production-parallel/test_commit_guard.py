@@ -61,7 +61,7 @@ class GithubReadTests(unittest.TestCase):
         error = commit_guard.subprocess.CalledProcessError(1, 'gh', output='HTTP 404 not found')
         with mock.patch.object(commit_guard.subprocess, 'check_output', side_effect=error) as run, \
              mock.patch.object(commit_guard.time, 'sleep') as sleep:
-            with self.assertRaises(commit_guard.subprocess.CalledProcessError):
+            with self.assertRaisesRegex(RuntimeError, "HTTP 404"):
                 commit_guard.gh_read_json('repos/example/missing')
         self.assertEqual(run.call_count, 1)
         sleep.assert_not_called()

@@ -1187,7 +1187,7 @@ def _recover_verified_remote(receipt_path, endpoint, remote_text, report, source
     receipt_path.write_text(json.dumps(receipt, ensure_ascii=False), encoding='utf-8')
     return receipt
 
-def run(task_path):
+def _run_once(task_path):
     inspected, report = _standard_report(task_path)
     source, confirmation = inspected['source'], inspected['confirmation']
     endpoint = commit_guard.endpoint_for_date(report['production_date'])
@@ -1235,6 +1235,21 @@ def run(task_path):
         return receipt
     finally:
         Path(candidate_path).unlink(missing_ok=True)
+
+
+def run(task_path):
+    # Rebuild only on explicit revision conflicts. Ambiguous writes must
+    # return through remote reconciliation instead of blindly repeating PUT.
+    for attempt in range(3):
+        try:
+            return _run_once(task_path)
+        except (RuntimeError, ValueError) as exc:
+            conflict = any(marker in str(exc) for marker in (
+                '远程已更新：', '提交前远程已更新：',
+            ))
+            if not conflict or attempt == 2:
+                raise
+            print(f'台账版本冲突，重新读取并校验（{attempt + 1}/2）：{exc}', file=sys.stderr)
 
 
 def main():

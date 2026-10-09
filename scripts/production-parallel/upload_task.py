@@ -143,7 +143,12 @@ def commit(db, task_path, expected_sha, candidate, review_note):
     environment = dict(os.environ)
     environment['PRODUCTION_INBOX_DB'] = str(Path(db).resolve())
     environment['PRODUCTION_LEDGER_ENDPOINT'] = task['ledger_endpoint']
-    return subprocess.run(args, env=environment, check=True)
+    try:
+        return subprocess.run(args, env=environment, check=True)
+    except subprocess.CalledProcessError as exc:
+        # Child stderr already contains the original failure. Do not replace
+        # its final line with a generic CalledProcessError traceback.
+        raise SystemExit(exc.returncode) from None
 
 
 def main(argv=None):
