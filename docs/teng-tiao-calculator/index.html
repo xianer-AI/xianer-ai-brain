@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#5d3b2b">
+  <meta name="description" content="输入包底横竖条数和包身圈数，计算横条、竖条、包身围条每根裁剪长度。每结耗料默认3.7厘米。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%235d3b2b'/%3E%3Cpath d='M16 20c10 0 10 24 20 24s10-24 20-24M16 32c10 0 10 24 20 24s10-24 20-24' fill='none' stroke='%23e8b66a' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>手工藤条计算器</title>
+  <style>
+    :root {
+      --ink: #2d211c;
+      --muted: #79685e;
+      --paper: #fcf8f1;
+      --surface: #fffdf9;
+      --line: #eaded0;
+      --brown: #5d3b2b;
+      --brown-deep: #42291e;
+      --gold: #d2944f;
+      --gold-soft: #f7e8d3;
+      --green: #496b57;
+      --shadow: 0 18px 50px rgba(68, 41, 30, .10);
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--paper); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at 15% 5%, rgba(210,148,79,.13), transparent 22rem),
+        linear-gradient(180deg, #fbf5ec 0%, var(--paper) 52%, #f8f1e7 100%);
+      min-height: 100vh;
+    }
+    .shell { width: min(100% - 32px, 980px); margin: 0 auto; padding: 24px 0 48px; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap: 16px; margin-bottom: 20px; }
+    .brand { display:flex; align-items:center; gap: 12px; }
+    .mark { width: 44px; height:44px; border-radius:14px; display:grid; place-items:center; color:#f9ecd9; background:var(--brown); box-shadow: 0 8px 20px rgba(93,59,43,.22); }
+    .mark svg { width: 26px; height:26px; }
+    .eyebrow { margin:0 0 2px; color:var(--gold); font-size: .76rem; letter-spacing:.14em; font-weight:700; text-transform:uppercase; }
+    h1 { margin:0; font-size: clamp(1.45rem, 5vw, 2rem); letter-spacing:-.03em; line-height:1.15; }
+    .topnote { color:var(--muted); font-size:.9rem; white-space:nowrap; }
+    .hero { color:#fff8ed; background: linear-gradient(135deg, var(--brown-deep), var(--brown)); border-radius: 26px; padding: 26px clamp(20px, 5vw, 38px); box-shadow: var(--shadow); position:relative; overflow:hidden; }
+    .hero:after { content:""; position:absolute; width:180px; height:180px; border:1px solid rgba(255,255,255,.16); border-radius:50%; right:-50px; top:-65px; box-shadow:0 0 0 24px rgba(255,255,255,.05), 0 0 0 48px rgba(255,255,255,.035); }
+    .hero h2 { position:relative; z-index:1; margin:0 0 8px; font-size:clamp(1.3rem,4.5vw,1.7rem); letter-spacing:-.02em; }
+    .hero p { position:relative; z-index:1; margin:0; max-width: 620px; color: #ead7c2; }
+    .layout { display:grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap:18px; margin-top:18px; align-items:start; }
+    .card { background:rgba(255,253,249,.9); border:1px solid rgba(234,222,208,.95); border-radius:22px; box-shadow: 0 10px 32px rgba(68,41,30,.06); }
+    .form-card { padding: 24px; }
+    .card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px; }
+    .card h3 { margin:0; font-size:1.12rem; letter-spacing:-.01em; }
+    .card-head p { margin:4px 0 0; color:var(--muted); font-size:.9rem; }
+    .pill { background:var(--gold-soft); color:#8a5a2e; border-radius:999px; padding:5px 10px; font-size:.75rem; font-weight:700; white-space:nowrap; }
+    .section-label { display:flex; align-items:center; gap:8px; color:var(--brown); font-weight:750; margin: 20px 0 10px; }
+    .section-label:first-of-type { margin-top:0; }
+    .section-label:before { content:""; width:8px; height:8px; border-radius:50%; background:var(--gold); box-shadow:0 0 0 4px var(--gold-soft); }
+    .fields { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    label { display:block; color:#4e3b31; font-weight:650; font-size:.94rem; }
+    .label-row { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+    .unit { color:var(--muted); font-size:.78rem; font-weight:500; }
+    input { width:100%; margin-top:7px; border:1px solid #ddcbbb; border-radius:13px; background:#fffefa; color:var(--ink); font:inherit; padding:12px 13px; outline:none; transition:.18s ease; }
+    input:focus { border-color:var(--gold); box-shadow:0 0 0 4px rgba(210,148,79,.17); }
+    input[aria-invalid="true"] { border-color:#c85e4d; box-shadow:0 0 0 4px rgba(200,94,77,.12); }
+    .error { min-height: 20px; margin-top:4px; color:#a84436; font-size:.78rem; }
+    .actions { display:flex; gap:10px; margin-top:8px; }
+    button { border:0; border-radius:13px; padding:12px 16px; font:inherit; font-weight:750; cursor:pointer; transition: transform .16s ease, box-shadow .16s ease, background .16s ease; }
+    button:active { transform:translateY(1px); }
+    .primary { flex:1; background:var(--brown); color:#fff8ed; box-shadow:0 10px 18px rgba(93,59,43,.2); }
+    .primary:hover { background:#704834; box-shadow:0 12px 22px rgba(93,59,43,.26); }
+    .ghost { background:#f4e9dc; color:var(--brown); }
+    .ghost:hover { background:#efdfcf; }
+    .result-card { padding:24px; }
+    .result-card .card-head { margin-bottom:14px; }
+    .status { display:inline-flex; align-items:center; gap:7px; color:var(--green); font-size:.82rem; font-weight:700; }
+    .status i { display:block; width:8px; height:8px; border-radius:50%; background:#6f9a78; }
+    .hero-result { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+    .metric { border-radius:17px; padding:16px; background:#f8efe4; border:1px solid #f0dfcc; }
+    .metric.featured { background:linear-gradient(145deg, #f2d5af, #f7e6d1); border-color:#e8c99f; }
+    .metric small { display:block; color:#795e4d; font-size:.8rem; }
+    .metric strong { display:block; margin-top:4px; color:var(--brown-deep); font-size:clamp(1.5rem, 5vw, 2.1rem); letter-spacing:-.04em; line-height:1.1; }
+    .metric strong span { margin-left:3px; font-size:.9rem; font-weight:650; letter-spacing:0; }
+    .details { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .detail { padding:12px 13px; border:1px solid var(--line); border-radius:14px; background:#fffdfa; }
+    .detail .k { color:var(--muted); font-size:.78rem; }
+    .detail .v { margin-top:3px; font-weight:750; }
+    .note { display:flex; gap:10px; align-items:flex-start; margin-top:15px; padding:13px 14px; border-radius:14px; background:#f7f2e9; color:#66564b; font-size:.86rem; }
+    .note b { color:var(--brown); }
+    details { margin-top:18px; border-top:1px solid var(--line); padding-top:14px; }
+    summary { cursor:pointer; color:var(--brown); font-weight:750; list-style:none; display:flex; align-items:center; justify-content:space-between; }
+    summary::-webkit-details-marker { display:none; }
+    summary:after { content:"＋"; font-size:1.2rem; color:var(--gold); }
+    details[open] summary:after { content:"－"; }
+    .formula { margin:12px 0 0; padding:14px; border-radius:14px; background:#3b2921; color:#f4dfc5; font-size:.84rem; }
+    .formula p { margin:5px 0; }
+    .formula code { color:#ffd49c; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    footer { text-align:center; color:#907a6b; font-size:.78rem; margin-top:20px; }
+    [hidden] { display:none !important; }
+    select { width:100%; margin:7px 0 14px; padding:12px; border:1px solid #ddcbbb; border-radius:13px; background:#fffefa; color:var(--ink); font:inherit; }
+    select:focus-visible, button:focus-visible, summary:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+    .hint { font-size:.875rem; color:var(--muted); margin:7px 0 14px; }
+    .cut-list { display:grid; gap:12px; }
+    .cut-item { padding:18px; border:1px solid #e8c99f; border-radius:16px; background:#f8ead7; }
+    .cut-heading { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+    .cut-heading h4 { font-size:1rem; margin:0; }
+    .quantity { font-size:.875rem; font-weight:700; color:var(--brown); }
+    .cut-length { margin-top:8px; color:var(--brown-deep); font-size:2rem; font-weight:800; line-height:1.25; overflow-wrap:anywhere; }
+    .cut-length span { font-size:.95rem; font-weight:600; }
+    .cut-formula { margin:6px 0 0; font-size:.875rem; color:#725544; overflow-wrap:anywhere; }
+    .cut-total { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:16px 0 0; color:var(--brown); font-size:.95rem; }
+    .empty-result { padding:24px 16px; background:#f7f2e9; border-radius:14px; color:var(--muted); }
+    .section-label { font-size:1rem; }
+    .unit, .error, .pill, footer { font-size:.875rem; }
+    .hero { padding:18px 24px; }
+    .hero:after { display:none; }
+    .hero h2 { font-size:1.2rem; }
+    @media (max-width: 720px) {
+      .shell { width:min(100% - 22px, 560px); padding-top:16px; }
+      .topnote { display:none; }
+      .layout { grid-template-columns:1fr; }
+      .form-card, .result-card { padding:20px; }
+    }
+    @media (max-width: 420px) {
+      .fields { grid-template-columns:1fr; gap:2px; }
+      .hero-result, .details { grid-template-columns:1fr 1fr; }
+      .metric strong { font-size:1.65rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 8c6 0 6 16 12 16S23 8 29 8M5 16c6 0 6 16 12 16s6-16 12-16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
+        <div><p class="eyebrow">HANDCRAFT TOOL</p><h1>手工藤条计算器</h1></div>
+      </div>
+      <div class="topnote">每根剪多长，一次算清</div>
+    </header>
+    <section class="hero" aria-labelledby="hero-title">
+      <h2 id="hero-title">横条、竖条、包身围条裁剪清单</h2>
+      <p>按长方形直纹方格编法估算。每结耗料默认 3.7 cm，收口与接头余量可自行调整。</p>
+    </section>
+    <section class="layout" aria-label="藤条裁剪计算器">
+      <form class="card form-card" id="calc-form" novalidate>
+        <div class="card-head">
+          <div><h3>填写你的包包参数</h3><p>初始数字仅为示例，请替换成实际数量。</p></div>
+        </div>
+        <div class="section-label">包底横竖条数</div>
+        <div class="fields">
+          <div>
+            <label for="horizontal"><span class="label-row"><span>包底横条</span><span class="unit">根</span></span></label>
+            <input id="horizontal" type="number" inputmode="numeric" min="1" max="10000" step="1" value="8" required aria-describedby="horizontal-error">
+            <div class="error" id="horizontal-error"></div>
+          </div>
+          <div>
+            <label for="vertical"><span class="label-row"><span>包底竖条</span><span class="unit">根</span></span></label>
+            <input id="vertical" type="number" inputmode="numeric" min="1" max="10000" step="1" value="12" required aria-describedby="vertical-error">
+            <div class="error" id="vertical-error"></div>
+          </div>
+        </div>
+        <div class="section-label">包身高度</div>
+        <label for="heightMode">高度填写方式</label>
+        <select id="heightMode"><option value="rows">按圈数填写（几排结）</option><option value="cm">按成品高度填写（厘米）</option></select>
+        <div class="fields">
+          <div id="rows-field">
+            <label for="bodyRows"><span class="label-row"><span>包身圈数</span><span class="unit">圈</span></span></label>
+            <input id="bodyRows" type="number" inputmode="numeric" min="1" max="10000" step="1" value="9" required aria-describedby="bodyRows-error">
+            <div class="error" id="bodyRows-error"></div>
+          </div>
+          <div id="height-field" hidden>
+            <label for="bodyLength"><span class="label-row"><span>成品包身高度</span><span class="unit">cm</span></span></label>
+            <input id="bodyLength" type="number" inputmode="decimal" min="0.01" max="100000" step="any" value="30" aria-describedby="bodyLength-error">
+            <div class="error" id="bodyLength-error"></div>
+          </div>
+          <div>
+            <label for="knotLength"><span class="label-row"><span>每结耗料</span><span class="unit">cm</span></span></label>
+            <input id="knotLength" type="number" inputmode="decimal" min="0.01" max="1000" step="any" value="3.7" required aria-describedby="knotLength-error knot-hint">
+            <div class="error" id="knotLength-error"></div>
+          </div>
+        </div>
+        <div id="pitch-field" hidden>
+          <label for="rowPitch"><span class="label-row"><span>实测编好一圈增加的高度</span><span class="unit">cm / 圈</span></span></label>
+          <input id="rowPitch" type="number" inputmode="decimal" min="0.01" max="1000" step="any" placeholder="量一下样片，例如 1.5" aria-describedby="rowPitch-error pitch-hint">
+          <div class="error" id="rowPitch-error"></div>
+          <p class="hint" id="pitch-hint">成品高度 ÷ 实测每圈高度，向上取整得到圈数。</p>
+        </div>
+        <p class="hint" id="knot-hint">3.7 cm 是一根藤条编一个结消耗的长度，不是成品一格的尺寸。</p>
+        <div class="section-label">收口与接头预留</div>
+        <div class="fields">
+          <div>
+            <label for="endAllowance"><span class="label-row"><span>横竖条每端预留</span><span class="unit">cm</span></span></label>
+            <input id="endAllowance" type="number" inputmode="decimal" min="0" max="10000" step="any" value="15" required aria-describedby="endAllowance-error allowance-hint">
+            <div class="error" id="endAllowance-error"></div>
+          </div>
+          <div>
+            <label for="joinAllowance"><span class="label-row"><span>包身每根接头预留</span><span class="unit">cm</span></span></label>
+            <input id="joinAllowance" type="number" inputmode="decimal" min="0" max="10000" step="any" value="30" required aria-describedby="joinAllowance-error allowance-hint">
+            <div class="error" id="joinAllowance-error"></div>
+          </div>
+        </div>
+        <p class="hint" id="allowance-hint">示例：横竖条两端各留 15 cm，包身每根共留 30 cm。请按自己的收口做法修改；填 0 可查看不含预留的用料。</p>
+        <div class="actions"><button class="primary" type="submit">计算每根裁剪长度</button><button class="ghost" type="button" id="reset-btn">恢复示例</button></div>
+      </form>
+      <section class="card result-card" aria-labelledby="result-title">
+        <div class="card-head"><div><h3 id="result-title">每根要剪多长</h3><p id="result-caption"></p></div><span class="pill" id="status" role="status" aria-live="polite"></span></div>
+        <div id="empty-result" class="empty-result" hidden>请先补全左侧参数，裁剪清单会自动显示。</div>
+        <div id="cut-results">
+          <div class="cut-list">
+            <article class="cut-item" aria-label="横条裁剪结果">
+              <div class="cut-heading"><h4>横条</h4><span class="quantity" id="horizontalCount"></span></div>
+              <div class="cut-length"><b id="horizontalCut"></b><span> cm / 根</span></div>
+              <p class="cut-formula" id="horizontalFormula"></p>
+            </article>
+            <article class="cut-item" aria-label="竖条裁剪结果">
+              <div class="cut-heading"><h4>竖条</h4><span class="quantity" id="verticalCount"></span></div>
+              <div class="cut-length"><b id="verticalCut"></b><span> cm / 根</span></div>
+              <p class="cut-formula" id="verticalFormula"></p>
+            </article>
+            <article class="cut-item" aria-label="包身裁剪结果">
+              <div class="cut-heading"><h4>包身围条</h4><span class="quantity" id="bodyCount"></span></div>
+              <div class="cut-length"><b id="bodyCut"></b><span> cm / 根</span></div>
+              <p class="cut-formula" id="bodyFormula"></p>
+            </article>
+          </div>
+          <div class="cut-total"><span id="totalStrips"></span><strong id="totalMaterial"></strong></div>
+          <p class="hint" id="height-summary"></p>
+          <div class="note"><div id="result-note"></div></div>
+        </div>
+        <details>
+          <summary>公式与适用编法</summary>
+          <div class="formula">
+            <p>横条每根 = <code>(竖条数 + 2 × 包身圈数) × 每结耗料 + 2 × 每端预留</code></p>
+            <p>竖条每根 = <code>(横条数 + 2 × 包身圈数) × 每结耗料 + 2 × 每端预留</code></p>
+            <p>包身每根 = <code>2 × (横条数 + 竖条数) × 每结耗料 + 接头预留</code></p>
+          </div>
+          <p class="hint">按横竖条在包底交叉、两端折起编包身、每圈单独用一根围条计算；包身各圈不加减结。横条穿过全部竖条，竖条穿过全部横条。不同花样和转角处理需按实际耗料调整。</p>
+          <p class="hint">裁剪长度含已填写的预留，向上取到 0.1 cm；总用料按这些裁剪长度合计。不含提手和装饰。</p>
+        </details>
+      </section>
+    </section>
+    <footer>先编一小段确认每结耗料，再按清单裁剪。</footer>
+  </main>
+  <script>
+    // Pure calculation: material consumption per knot and finished row pitch are independent.
+    function calculateCutList(v) {
+      const ceilStable = (value) => Math.ceil(value - 1e-10 * Math.max(1, Math.abs(value)));
+      const rows = v.heightMode === 'cm' ? ceilStable(v.bodyLength / v.rowPitch) : v.bodyRows;
+      const upTenth = (value) => ceilStable(value * 10) / 10;
+      const horizontalKnots = v.vertical + 2 * rows;
+      const verticalKnots = v.horizontal + 2 * rows;
+      const bodyKnots = 2 * (v.horizontal + v.vertical);
+      const horizontalCut = upTenth(horizontalKnots * v.knotLength + 2 * v.endAllowance);
+      const verticalCut = upTenth(verticalKnots * v.knotLength + 2 * v.endAllowance);
+      const bodyCut = upTenth(bodyKnots * v.knotLength + v.joinAllowance);
+      const totalCm = horizontalCut * v.horizontal + verticalCut * v.vertical + bodyCut * rows;
+      return { rows, horizontalKnots, verticalKnots, bodyKnots, horizontalCut, verticalCut, bodyCut,
+        totalStrips: v.horizontal + v.vertical + rows, totalCm,
+        coveredHeight: v.heightMode === 'cm' ? rows * v.rowPitch : null };
+    }
+    (() => {
+      const defaults = { horizontal: 8, vertical: 12, bodyRows: 9, bodyLength: 30, knotLength: 3.7, rowPitch: '', endAllowance: 15, joinAllowance: 30 };
+      const fields = Object.keys(defaults);
+      const $ = (id) => document.getElementById(id);
+      const fmt = (n, digits = 1) => Number(n.toFixed(digits)).toLocaleString('zh-CN', { maximumFractionDigits: digits });
+      const integerFields = ['horizontal', 'vertical', 'bodyRows'];
+      function modeFields() {
+        const cm = $('heightMode').value === 'cm';
+        $('rows-field').hidden = cm;
+        $('height-field').hidden = !cm;
+        $('pitch-field').hidden = !cm;
+        $('bodyRows').disabled = cm;
+        $('bodyLength').disabled = !cm;
+        $('rowPitch').disabled = !cm;
+        $('bodyRows').required = !cm;
+        $('bodyLength').required = cm;
+        $('rowPitch').required = cm;
+      }
+      function readValues() {
+        const values = {heightMode: $('heightMode').value};
+        let firstInvalid = null;
+        fields.forEach((id) => {
+          const input = $(id);
+          const raw = input.value.trim();
+          const value = Number(raw);
+          let message = '';
+          if (!input.disabled) {
+            if (raw === '' || !Number.isFinite(value)) message = '请填写数字';
+            else if (value < Number(input.min)) message = Number(input.min) === 0 ? '不能小于 0' : '请输入大于 0 的数字';
+            else if (value > Number(input.max)) message = `请填写不超过 ${input.max} 的数字`;
+            else if (integerFields.includes(id) && !Number.isInteger(value)) message = '条数和圈数请填写整数';
+          }
+          $(id + '-error').textContent = message;
+          input.setAttribute('aria-invalid', String(Boolean(message)));
+          if (message && !firstInvalid) firstInvalid = input;
+          values[id] = value;
+        });
+        if (!firstInvalid && values.heightMode === 'cm' && values.bodyLength / values.rowPitch > 10000) {
+          $('rowPitch-error').textContent = '超过 10000 圈，请检查成品高度和每圈高度';
+          $('rowPitch').setAttribute('aria-invalid', 'true');
+          firstInvalid = $('rowPitch');
+        }
+        return {values, firstInvalid};
+      }
+      function run(focusError = false) {
+        const {values: v, firstInvalid} = readValues();
+        $('cut-results').hidden = Boolean(firstInvalid);
+        $('empty-result').hidden = !firstInvalid;
+        $('status').textContent = firstInvalid ? '待填写' : '已计算';
+        if (firstInvalid) {
+          $('result-caption').textContent = '输入有效参数后计算，暂不显示旧结果。';
+          if (focusError) firstInvalid.focus();
+          return;
+        }
+        const r = calculateCutList(v);
+        $('horizontalCut').textContent = fmt(r.horizontalCut);
+        $('verticalCut').textContent = fmt(r.verticalCut);
+        $('bodyCut').textContent = fmt(r.bodyCut);
+        $('horizontalCount').textContent = `剪 ${fmt(v.horizontal)} 根`;
+        $('verticalCount').textContent = `剪 ${fmt(v.vertical)} 根`;
+        $('bodyCount').textContent = `剪 ${fmt(r.rows)} 根 · 每圈 1 根`;
+        $('horizontalFormula').textContent = `(${fmt(v.vertical)} + 2 × ${fmt(r.rows)}) × ${fmt(v.knotLength, 4)} + 2 × ${fmt(v.endAllowance, 4)}`;
+        $('verticalFormula').textContent = `(${fmt(v.horizontal)} + 2 × ${fmt(r.rows)}) × ${fmt(v.knotLength, 4)} + 2 × ${fmt(v.endAllowance, 4)}`;
+        $('bodyFormula').textContent = `2 × (${fmt(v.horizontal)} + ${fmt(v.vertical)}) × ${fmt(v.knotLength, 4)} + ${fmt(v.joinAllowance, 4)}`;
+        $('totalStrips').textContent = `一共剪 ${fmt(r.totalStrips)} 根`;
+        $('totalMaterial').textContent = `合计用料 ${fmt(r.totalCm / 100, 3)} 米`;
+        $('result-caption').textContent = `横 ${fmt(v.horizontal)} 根 · 竖 ${fmt(v.vertical)} 根 · 包身 ${fmt(r.rows)} 圈`;
+        $('height-summary').textContent = v.heightMode === 'cm'
+          ? `${fmt(v.bodyLength, 4)} cm ÷ ${fmt(v.rowPitch, 4)} cm/圈，向上取整为 ${fmt(r.rows)} 圈；按样片估计成品高度 ${fmt(r.coveredHeight, 4)} cm。`
+          : `包身按 ${fmt(r.rows)} 圈计算。成品高度由编织松紧与实际结距决定。`;
+        $('result-note').textContent = `预留已计入：横竖条每端 ${fmt(v.endAllowance, 4)} cm（每根共 ${fmt(2 * v.endAllowance, 4)} cm），包身每根共 ${fmt(v.joinAllowance, 4)} cm。`
+          + (v.endAllowance === 0 || v.joinAllowance === 0 ? ' 部分预留为 0，请在裁剪前确认。' : '')
+          + ' 裁剪长度向上取到 0.1 cm。';
+      }
+      $('calc-form').addEventListener('submit', (event) => { event.preventDefault(); run(true); });
+      fields.forEach((id) => $(id).addEventListener('input', () => run()));
+      $('heightMode').addEventListener('change', () => { modeFields(); run(); });
+      $('reset-btn').addEventListener('click', () => {
+        fields.forEach((id) => { $(id).value = defaults[id]; });
+        $('heightMode').value = 'rows';
+        modeFields(); run();
+      });
+      modeFields(); run();
+    })();
+  </script>
+</body>
+</html>
