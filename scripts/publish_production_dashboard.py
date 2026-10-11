@@ -27,6 +27,9 @@ STATE = Path("/Users/xianer/.openclaw/state/production-parallel/cloudbase-dashbo
 LOG = Path("/Users/xianer/.openclaw/logs/cloudbase-dashboard-publish.log")
 LOCK = Path("/Users/xianer/.openclaw/state/production-parallel/cloudbase-dashboard-publish.lock")
 PUBLIC_URL = f"https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/{CLOUD_PATH}/index.html"
+CALCULATOR_SOURCE = REPO / 'docs/teng-tiao-calculator/index.html'
+CALCULATOR_CLOUD_PATH = "teng-tiao-calculator"
+CALCULATOR_PUBLIC_URL = f"https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/{CALCULATOR_CLOUD_PATH}/index.html"
 COMPATIBILITY_FILES = {
     'production-dashboard.html': REPO / 'docs/production-dashboard.html',
 }
@@ -68,6 +71,7 @@ def main() -> int:
         try:
             rendered, manifest, release = capture_snapshot()
             compatibility = {name: path.read_bytes() for name, path in COMPATIBILITY_FILES.items()}
+            calculator_content = CALCULATOR_SOURCE.read_bytes() if CALCULATOR_SOURCE.is_file() else None
         except Exception as exc:
             log(f'publish failed: snapshot build {type(exc).__name__}: {str(exc)[:250]}')
             return 1
@@ -76,6 +80,8 @@ def main() -> int:
         # The domain root was a separate old production page. Update only its
         # index.html file, never deploy a directory to the domain root.
         compatibility_hashes['/index.html'] = compatibility_hashes['production-dashboard.html']
+        if calculator_content is not None:
+            compatibility_hashes[f'/{CALCULATOR_CLOUD_PATH}/index.html'] = sha256(calculator_content)
         previous = {}
         if STATE.is_file():
             try:
@@ -105,6 +111,9 @@ def main() -> int:
             (Path(tmp) / 'release.json').write_bytes(manifest)
             for filename, content in compatibility.items():
                 (Path(tmp) / filename).write_bytes(content)
+            if calculator_content is not None:
+                calculator_file = Path(tmp) / 'teng-tiao-calculator.html'
+                calculator_file.write_bytes(calculator_content)
             command = [
                 str(TCB),
                 "hosting",
@@ -125,7 +134,18 @@ def main() -> int:
             publish_env = dict(os.environ)
             node_bin = "/Users/xianer/.local/share/fnm/node-versions/v24.21.0/installation/bin"
             publish_env["PATH"] = node_bin + ":" + publish_env.get("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
-            for deployment in (command, root_command):
+            deployments = [command, root_command]
+            if calculator_content is not None:
+                deployments.append([
+                    str(TCB),
+                    'hosting',
+                    'deploy',
+                    str(calculator_file),
+                    f'{CALCULATOR_CLOUD_PATH}/index.html',
+                    '-e', ENV_ID,
+                    '--safe', '--verify', '--json',
+                ])
+            for deployment in deployments:
                 try:
                     result = subprocess.run(deployment, text=True, capture_output=True, timeout=120, env=publish_env)
                 except Exception as exc:
