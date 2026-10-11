@@ -8,6 +8,7 @@
 | 2026 年下半年 | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html?year=2026 | 2026 年下半年台账 |
 | 2027 年全年 | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/index.html?year=2027 | 2027 年全年台账 |
 | 已发布版本清单 | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/production-dashboard/release.json | 核对规则版本、源摘要及各年度台账摘要 |
+| 手工藤条计算器（国内入口） | https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/teng-tiao-calculator/index.html | 与袜子生产统计工作台同一国内域名，独立路径 |
 
 ## 发布与核验
 
@@ -20,6 +21,12 @@
 ## 显示口径
 
 两年度统一显示“下机翻袜产量”和“烤边产量”。李鸿玉与张小翠同产品的烤边产量合计为“总产量（烤边）”。内部工序仍用“下机／烤边”，年度台账的原有文件名、人员标题与工序列继续保留，解析及数量统计使用原值。
+
+## 手工藤条计算器（国内入口）
+
+- 国内地址：`https://tengtiao-calc-d8gpq679da44f9bc2-1497888928.tcloudbaseapp.com/teng-tiao-calculator/index.html`
+- 该页面使用独立的 `/teng-tiao-calculator/` 路径，不覆盖 `/production-dashboard/`，也不修改域名根 `index.html`。
+- 发布脚本会单独上传并回读该页面；袜子生产统计工作台继续使用原来的 `/production-dashboard/index.html`。
 
 ## 历史入口
 
